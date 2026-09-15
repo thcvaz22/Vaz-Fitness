@@ -9,6 +9,8 @@ const copies=[
   ['personal/index-v2.html',`${out}/index.html`],
   ['personal/app-v2.js',`${out}/app-v2.js`],
   ['personal/app-v2.css',`${out}/app-v2.css`],
+  ['personal/training-library-v2.js',`${out}/training-library-v2.js`],
+  ['personal/training-library-v2.css',`${out}/training-library-v2.css`],
   ['personal/manifest.webmanifest',`${out}/manifest.webmanifest`]
 ];
 for(const [src,dst] of copies){if(!existsSync(src))throw new Error(`Arquivo ausente: ${src}`);await copyFile(src,dst)}
