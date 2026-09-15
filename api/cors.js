@@ -1,5 +1,6 @@
 const ALLOWED_ORIGINS = new Set([
   'https://vaz-fitness.vercel.app',
+  'https://vaz-fitness-vaz3.vercel.app',
   'https://localhost',
   'capacitor://localhost',
   'ionic://localhost'
@@ -12,7 +13,7 @@ export function applyCors(req,res){
     res.setHeader('Vary','Origin');
   }
   res.setHeader('Access-Control-Allow-Methods','GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers','Content-Type');
+  res.setHeader('Access-Control-Allow-Headers','Content-Type, Authorization');
   res.setHeader('Access-Control-Max-Age','86400');
   if(req.method==='OPTIONS'){
     res.status(204).end();
