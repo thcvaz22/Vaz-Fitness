@@ -124,8 +124,9 @@ export default async function handler(req, res){
     return res.status(200).json(data);
   }catch(error){
     const status=Number(error?.status||error?.statusCode||0);
+    const code=String(error?.code||error?.name||'provider_error').slice(0,80);
+    console.error('AION Gemini error',{status:status||null,code});
     const msg=String(error?.message||'');
-    console.error('AION Gemini error', status||'', msg.slice(0,240));
     if(status===429||/RESOURCE_EXHAUSTED|rate.?limit|quota/i.test(msg)){
       res.setHeader('Retry-After','60');
       return res.status(429).json({ error:'aion_provider_rate_limited' });
