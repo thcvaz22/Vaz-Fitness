@@ -1,22 +1,26 @@
-import { getConnection, refreshConnection, validInstallationId } from '../lib/strava-lib.js';
+import { authenticateStravaAthlete, getConnectionForUser, refreshConnection, stravaRateInfo, validInstallationId } from '../lib/strava-lib.js';
 import { applyCors } from './cors.js';
 
 const STRAVA_API='https://www.strava.com/api/v3';
+const MAX_BACKFILL_DAYS=90;
 
 export default async function handler(req,res){
   if(applyCors(req,res))return;
+  res.setHeader('Cache-Control','no-store');
   if(req.method!=='GET')return res.status(405).json({error:'Método não permitido.'});
   try{
+    const auth=await authenticateStravaAthlete(req);
+    if(!auth)return res.status(401).json({connected:false,error:'unauthorized'});
     const installationId=String(req.query?.installationId||'');
     if(!validInstallationId(installationId))return res.status(400).json({error:'installationId inválido'});
-    let conn=await getConnection(installationId);
+    let conn=await getConnectionForUser(installationId,auth.user.id);
     if(!conn)return res.status(401).json({connected:false,error:'Strava não conectado.'});
     conn=await refreshConnection(conn);
 
     const now=Math.floor(Date.now()/1000);
-    const defaultAfter=now-(120*24*60*60);
+    const earliest=now-(MAX_BACKFILL_DAYS*24*60*60);
     const requestedAfter=Number(req.query?.after);
-    const after=Number.isFinite(requestedAfter)?Math.max(0,Math.floor(requestedAfter)):defaultAfter;
+    const after=Number.isFinite(requestedAfter)?Math.max(earliest,Math.floor(requestedAfter)):earliest;
     const url=new URL(`${STRAVA_API}/athlete/activities`);
     url.searchParams.set('after',String(after));
     url.searchParams.set('per_page','100');
@@ -24,7 +28,12 @@ export default async function handler(req,res){
 
     const r=await fetch(url,{headers:{Authorization:`Bearer ${conn.access_token}`}});
     const data=await r.json().catch(()=>[]);
-    if(!r.ok)throw new Error(data?.message||`Falha ao consultar atividades do Strava (${r.status}).`);
+    const rate=stravaRateInfo(r.headers);
+    if(!r.ok){
+      const message=data?.message||`Falha ao consultar atividades do Strava (${r.status}).`;
+      if(r.status===429){res.setHeader('Retry-After','900');return res.status(429).json({connected:true,error:message,rate});}
+      throw new Error(message);
+    }
 
     const activities=(Array.isArray(data)?data:[])
       .filter(a=>String(a.sport_type||a.type||'').toLowerCase().includes('run'))
@@ -43,8 +52,7 @@ export default async function handler(req,res){
         trainer:!!a.trainer
       }));
 
-    res.setHeader('Cache-Control','no-store');
-    return res.status(200).json({connected:true,activities});
+    return res.status(200).json({connected:true,activities,syncedAfter:after,serverTime:now,rate});
   }catch(err){
     return res.status(500).json({connected:true,error:err.message});
   }
