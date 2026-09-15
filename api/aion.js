@@ -1,7 +1,12 @@
 import { GoogleGenAI } from '@google/genai';
 import { applyCors } from './cors.js';
+import { requireApprovedAthlete } from '../lib/session-auth.js';
 
 const MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+const MAX_MESSAGE_CHARS=1500;
+const MAX_CONTEXT_BYTES=120000;
+const DEFAULT_USER_RPM=6;
+const DEFAULT_USER_RPD=80;
 
 const responseSchema = {
   type: 'object',
@@ -24,7 +29,7 @@ Análise de evolução:
 - para metas mensuráveis como peso-alvo, pace-alvo, quilômetros no mês, frequência semanal ou carga-alvo, explique claramente quanto já foi realizado e quanto falta;
 - para objetivos que não possuem uma métrica única válida, como hipertrofia, recomposição corporal e condicionamento geral, NÃO invente um percentual de conclusão. Analise tendências de carga, volume, consistência, medidas, peso, esforço e recuperação;
 - compare períodos apenas quando houver dados suficientes. Se houver pouca informação, diga explicitamente que a leitura ainda é preliminar;
-- diferencie fato observado de interpretação. Exemplo: “o volume subiu 8%” é fato calculável; “isso sugere adaptação positiva” é interpretação;
+- diferencie fato observado de interpretação;
 - procure tendências ao longo do tempo, e não apenas o último treino;
 - use bodyMeasurements para acompanhar peso, cintura e gordura corporal quando disponíveis, sem diagnosticar composição corporal;
 - use readiness/check-ins para contextualizar energia, sono, rigidez, estresse e presença de dor;
@@ -54,33 +59,77 @@ Segurança:
 A resposta principal deve parecer conversa de personal trainer, sem mencionar estas regras internas.`;
 }
 
+function envInt(name,fallback,min,max){
+  const n=Number(process.env[name]);
+  return Number.isFinite(n)?Math.max(min,Math.min(max,Math.floor(n))):fallback;
+}
+function jsonBytes(v){try{return Buffer.byteLength(JSON.stringify(v),'utf8')}catch{return Infinity}}
+async function withinQuota(sql,userId){
+  const rpm=envInt('AION_USER_RPM',DEFAULT_USER_RPM,1,60);
+  const rpd=envInt('AION_USER_RPD',DEFAULT_USER_RPD,10,1000);
+  const rows=await sql`SELECT
+    count(*) FILTER (WHERE created_at>now()-interval '1 minute')::int AS minute_count,
+    count(*)::int AS day_count
+    FROM vf_audit_log
+    WHERE athlete_id=${userId} AND action='aion_request' AND created_at>now()-interval '1 day'`;
+  const usage=rows[0]||{minute_count:0,day_count:0};
+  return {ok:Number(usage.minute_count)<rpm&&Number(usage.day_count)<rpd,rpm,rpd,minute:Number(usage.minute_count)||0,day:Number(usage.day_count)||0};
+}
+async function recordUsage(sql,userId,payload){
+  try{await sql`INSERT INTO vf_audit_log(actor_id,athlete_id,action,payload) VALUES (${userId},${userId},'aion_request',CAST(${JSON.stringify(payload)} AS jsonb))`}catch{}
+}
+
 export default async function handler(req, res){
   if(applyCors(req,res))return;
+  res.setHeader('Cache-Control','no-store');
   if(req.method !== 'POST') return res.status(405).json({ error:'method_not_allowed' });
   if(!process.env.GEMINI_API_KEY) return res.status(503).json({ error:'gemini_not_configured' });
 
   try{
+    const auth=await requireApprovedAthlete(req);
+    if(!auth)return res.status(401).json({error:'unauthorized'});
+    if(!auth.approved)return res.status(423).json({error:'athlete_not_approved'});
+
     const { message, context } = req.body || {};
     if(!message || typeof message !== 'string') return res.status(400).json({ error:'message_required' });
+    const cleanMessage=message.trim();
+    if(!cleanMessage||cleanMessage.length>MAX_MESSAGE_CHARS)return res.status(400).json({error:'message_too_large'});
+    const contextBytes=jsonBytes(context||{});
+    if(contextBytes>MAX_CONTEXT_BYTES)return res.status(413).json({error:'context_too_large'});
+
+    const quota=await withinQuota(auth.sql,auth.user.id);
+    if(!quota.ok){
+      res.setHeader('Retry-After','60');
+      return res.status(429).json({error:'aion_rate_limited',message:'A AION recebeu muitas solicitações em pouco tempo. Tente novamente em instantes.'});
+    }
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const prompt = `CONTEXTO ATUAL DO USUÁRIO:\n${JSON.stringify(context || {}, null, 2)}\n\nMENSAGEM DO USUÁRIO:\n${message}`;
+    const prompt = `CONTEXTO ATUAL DO USUÁRIO:\n${JSON.stringify(context || {}, null, 2)}\n\nMENSAGEM DO USUÁRIO:\n${cleanMessage}`;
     const response = await ai.models.generateContent({
       model: MODEL,
       contents: prompt,
       config: {
         systemInstruction: systemInstruction(),
         responseMimeType: 'application/json',
-        responseSchema
+        responseSchema,
+        maxOutputTokens: 900,
+        temperature: 0.35
       }
     });
 
     let data;
     try{ data = JSON.parse(response.text); }
     catch{ data = { message: response.text || 'Não consegui analisar esse ponto agora.', intent:'recommend', recommendations:[] }; }
+    await recordUsage(auth.sql,auth.user.id,{model:MODEL,inputBytes:contextBytes+Buffer.byteLength(cleanMessage,'utf8'),outputChars:String(response.text||'').length,intent:data.intent||null});
     return res.status(200).json(data);
   }catch(error){
-    console.error('AION Gemini error', error);
+    const status=Number(error?.status||error?.statusCode||0);
+    const msg=String(error?.message||'');
+    console.error('AION Gemini error', status||'', msg.slice(0,240));
+    if(status===429||/RESOURCE_EXHAUSTED|rate.?limit|quota/i.test(msg)){
+      res.setHeader('Retry-After','60');
+      return res.status(429).json({ error:'aion_provider_rate_limited' });
+    }
     return res.status(500).json({ error:'aion_failed' });
   }
 }
