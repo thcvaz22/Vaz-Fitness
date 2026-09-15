@@ -6,7 +6,7 @@ const SESSION_DAYS=30;
 const CODE_ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const BOOTSTRAP_ADMIN_USERNAME='Admin.vaz22';
 const BOOTSTRAP_SALT='28c8ac8895125950ebd79eb7b449847f';
-const BOOTSTRAP_HASH='be72ee4e43ee9cfa3ea77f536cfa26f141caee4ea03e9a13df18dc288e7fac9de64feb0e02451c9987b32bdd3dc8354943e5bd32483538859935427310dbfb73c';
+const BOOTSTRAP_HASH='577e2e620318f54c33d92e0212dd0b095e28c320b3c213d904d23f2d0529a1b30451d34f6514a5ed25f3f4e39ad82e868e5d2f54a77be1fd536bd4117db2c18e';
 
 function db(){if(!process.env.DATABASE_URL)throw new Error('DATABASE_URL não configurada.');return neon(process.env.DATABASE_URL)}
 function clean(v='',max=120){return String(v??'').trim().slice(0,max)}
