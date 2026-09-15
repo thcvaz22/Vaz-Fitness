@@ -1,4 +1,4 @@
-import { exchangeCode, readState, saveConnection } from './strava-lib.js';
+import { exchangeCode, readState, saveConnection } from '../lib/strava-lib.js';
 
 export default async function handler(req,res){
   try{
