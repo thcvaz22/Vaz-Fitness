@@ -1,0 +1,49 @@
+name: Android Debug APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'app-*.js'
+      - 'index.html'
+      - 'styles.css'
+      - 'native-entry.js'
+      - 'capacitor.config.ts'
+      - 'scripts/**'
+      - 'package.json'
+      - '.github/workflows/android-debug.yml'
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install dependencies
+        run: npm install
+      - name: Prepare native web bundle
+        run: npm run native:prepare
+      - name: Create Android project
+        run: npx cap add android
+      - name: Configure native permissions
+        run: node scripts/configure-native.mjs
+      - name: Sync Capacitor
+        run: npx cap sync android
+      - name: Build debug APK
+        working-directory: android
+        run: chmod +x gradlew && ./gradlew assembleDebug
+      - name: Upload Vaz Fitness APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Vaz-Fitness-Android-Debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
