@@ -1,4 +1,4 @@
-import { getConnection, validInstallationId } from './strava-lib.js';
+import { getConnection, validInstallationId } from '../lib/strava-lib.js';
 import { applyCors } from './cors.js';
 
 export default async function handler(req,res){
