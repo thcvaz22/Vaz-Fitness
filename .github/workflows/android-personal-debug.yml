@@ -38,11 +38,11 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Validate Vaz Personal JavaScript
-        run: node --check personal/app-v2.js && node --check personal/training-library-v2.js && node --check personal/coach-tools-v4.js && node --check api/personal-auth.js && node --check api/health.js && node --check api/personal-ops.js && node --check lib/admin-handler.js && node --check lib/training-library-handler.js && node --check lib/personal-tools-handler.js && node --check lib/exercise-catalog-v4.js
+        run: node --check personal/app-v2.js && node --check personal/training-library-v2.js && node --check personal/exercise-catalog-v4.js && node --check personal/coach-tools-v4.js && node --check api/personal-auth.js && node --check api/health.js && node --check api/personal-ops.js && node --check lib/admin-handler.js && node --check lib/training-library-handler.js && node --check lib/personal-tools-handler.js && node --check lib/exercise-catalog-v4.js
       - name: Prepare Vaz Personal native bundle
         run: node scripts/build-personal-native-v2.mjs
       - name: Validate native bundle
-        run: node --check www-personal/app-v2.js && node --check www-personal/training-library-v2.js && node --check www-personal/coach-tools-v4.js
+        run: node --check www-personal/app-v2.js && node --check www-personal/training-library-v2.js && node --check www-personal/exercise-catalog-v4.js && node --check www-personal/coach-tools-v4.js
       - name: Use Vaz Personal Capacitor config
         run: cp capacitor.personal.config.json capacitor.config.json
       - name: Create Android project
