@@ -10,6 +10,7 @@
     { "source": "/api/admin-v2", "destination": "/api/health?scope=admin" },
     { "source": "/api/training-library", "destination": "/api/health?scope=library" },
     { "source": "/api/personal-tools", "destination": "/api/health?scope=tools" },
+    { "source": "/api/personal-plans", "destination": "/api/health?scope=plans" },
     { "source": "/api/strava-webhook", "destination": "/api/health?scope=strava_webhook" }
   ],
   "headers": [
