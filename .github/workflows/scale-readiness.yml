@@ -1,0 +1,36 @@
+name: Scale Readiness 300
+
+on:
+  push:
+    branches: [scale-readiness-300]
+  workflow_dispatch:
+
+jobs:
+  validate-scale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Validate server modules
+        run: |
+          node --check api/aion.js
+          node --check api/vf.js
+          node --check api/personal-ops.js
+          node --check api/strava-activities.js
+          node --check api/strava-status.js
+          node --check api/strava-upload.js
+          node --check api/strava-callback.js
+          node --check api/health.js
+          node --check lib/session-auth.js
+          node --check lib/strava-lib.js
+          node --check lib/strava-webhook-handler.js
+      - name: Validate client scale layer
+        run: node --check app-scale-v1.js && node --check app-polish-v2.js
+      - name: Build native bundle smoke test
+        run: node scripts/build-native.mjs
+      - name: Validate generated native scale layer
+        run: test -f www/app-scale-v1.js && node --check www/app-scale-v1.js && test -f www/app-native-bundle.js
