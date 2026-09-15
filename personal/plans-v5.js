@@ -76,18 +76,26 @@
     block.querySelector('#savePersonalPlan').onclick=async()=>{const code=block.querySelector('#managePlanSelect').value;if(!code){toast('Selecione um plano.');return}try{const d=await planApi('set_plan',{method:'POST',body:{personalId:id,planCode:code}});await loadAdmin();toast(d.warning||'Plano atualizado.');m.remove();render()}catch(err){toast(err.message)}};
   };
 
+  function openClaimModal(){
+    const a=planState.mine;
+    if(!a?.planCode){toast('Seu plano ainda não foi definido pelo administrador.');return}
+    if(a.studentCount>=a.studentLimit){toast(`Você atingiu o limite de ${a.studentLimit} alunos do seu plano.`);return}
+    const m=showModal(`<h2>Vincular aluno</h2><p>Digite o código ID enviado pelo aluno. Você possui ${a.remaining} vaga(s) disponível(is).</p><form id="planClaimForm"><div class="vp-field"><label>Código</label><input name="code" placeholder="VF-XXXX-XXXX-XXXX" required></div><button class="vp-btn primary" style="margin-top:10px">Vincular aluno</button></form>`);
+    m.querySelector('#planClaimForm').onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.target),btn=e.target.querySelector('button');btn.disabled=true;btn.textContent='Vinculando…';try{await planApi('claim',{method:'POST',body:{code:String(fd.get('code')||'').toUpperCase()}});await loadPersonal();m.remove();toast('Aluno vinculado ao seu plano.');render()}catch(err){toast(err.message);btn.disabled=false;btn.textContent='Vincular aluno'}};
+  }
+
   const oldBindPersonal=bindPersonal;
   bindPersonal=function(){
     oldBindPersonal();
     const btn=document.getElementById('claimBtn'),a=planState.mine;
-    if(btn&&(!a?.planCode||a.studentCount>=a.studentLimit)){
-      btn.disabled=true;btn.classList.add('disabled');btn.title=!a?.planCode?'Plano ainda não definido.':'Limite de alunos atingido.';
-      btn.onclick=()=>toast(!a?.planCode?'Seu plano ainda não foi definido pelo administrador.':'Você atingiu o limite de alunos do seu plano.');
+    if(btn){
+      btn.onclick=openClaimModal;
+      if(!a?.planCode||a.studentCount>=a.studentLimit){btn.classList.add('disabled');btn.title=!a?.planCode?'Plano ainda não definido.':'Limite de alunos atingido.';}
     }
   };
 
   const style=document.createElement('style');style.textContent=`
-    .vp-plan-card{display:flex;align-items:center;justify-content:space-between;gap:18px;overflow:hidden;position:relative}.vp-plan-card:after{content:'';position:absolute;width:160px;height:160px;border-radius:50%;background:rgba(245,196,0,.12);right:-55px;top:-70px;pointer-events:none}.vp-plan-card.warning{border-color:#e9c95a}.vp-plan-card.danger{border-color:#e49b94}.vp-plan-kicker{font-size:10px;font-weight:900;letter-spacing:.12em;color:#8d7400}.vp-plan-card h2{margin:5px 0 3px}.vp-plan-card p{margin:0;color:var(--muted)}.vp-plan-main{flex:1;min-width:0}.vp-plan-price{text-align:right;z-index:1}.vp-plan-price small,.vp-plan-price strong{display:block}.vp-plan-price strong{font-size:20px;margin-top:4px}.vp-plan-progress{height:7px;border-radius:999px;background:#ecebe5;margin-top:12px;overflow:hidden}.vp-plan-progress i{display:block;height:100%;background:linear-gradient(90deg,#e0ad00,#f5c400);border-radius:inherit}.vp-plan-preview{display:grid;grid-template-columns:1fr auto;gap:5px 16px;background:#faf8ed;border:1px solid #eee5bd;border-radius:16px;padding:14px;margin-top:10px}.vp-plan-preview strong{font-size:17px}.vp-plan-preview span:nth-of-type(2){font-weight:900}.vp-plan-preview small{grid-column:1/-1;color:var(--muted)}.vp-admin-plan-box{margin-bottom:12px}.vp-btn.disabled,.vp-btn:disabled{opacity:.48;cursor:not-allowed}@media(max-width:620px){.vp-plan-card{align-items:flex-start;flex-direction:column}.vp-plan-price{text-align:left}.vp-plan-preview{grid-template-columns:1fr}}
+    .vp-plan-card{display:flex;align-items:center;justify-content:space-between;gap:18px;overflow:hidden;position:relative}.vp-plan-card:after{content:'';position:absolute;width:160px;height:160px;border-radius:50%;background:rgba(245,196,0,.12);right:-55px;top:-70px;pointer-events:none}.vp-plan-card.warning{border-color:#e9c95a}.vp-plan-card.danger{border-color:#e49b94}.vp-plan-kicker{font-size:10px;font-weight:900;letter-spacing:.12em;color:#8d7400}.vp-plan-card h2{margin:5px 0 3px}.vp-plan-card p{margin:0;color:var(--muted)}.vp-plan-main{flex:1;min-width:0}.vp-plan-price{text-align:right;z-index:1}.vp-plan-price small,.vp-plan-price strong{display:block}.vp-plan-price strong{font-size:20px;margin-top:4px}.vp-plan-progress{height:7px;border-radius:999px;background:#ecebe5;margin-top:12px;overflow:hidden}.vp-plan-progress i{display:block;height:100%;background:linear-gradient(90deg,#e0ad00,#f5c400);border-radius:inherit}.vp-plan-preview{display:grid;grid-template-columns:1fr auto;gap:5px 16px;background:#faf8ed;border:1px solid #eee5bd;border-radius:16px;padding:14px;margin-top:10px}.vp-plan-preview strong{font-size:17px}.vp-plan-preview span:nth-of-type(2){font-weight:900}.vp-plan-preview small{grid-column:1/-1;color:var(--muted)}.vp-admin-plan-box{margin-bottom:12px}.vp-btn.disabled{opacity:.48}.vp-btn:disabled{opacity:.48;cursor:not-allowed}@media(max-width:620px){.vp-plan-card{align-items:flex-start;flex-direction:column}.vp-plan-price{text-align:left}.vp-plan-preview{grid-template-columns:1fr}}
   `;document.head.appendChild(style);
 
   queueMicrotask(async()=>{if(token&&me){await loadPlanData();try{render()}catch{}}});
