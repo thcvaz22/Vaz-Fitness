@@ -3,7 +3,6 @@
   const form=document.getElementById('onboardingForm');
   if(!form||document.querySelector('[data-step="5"]'))return;
 
-  // Reorganiza o onboarding: 1 modalidade, 2 perfil físico, 3 objetivo, 4 rotina, 5 corrida.
   const original2=document.querySelector('[data-step="2"]');
   const original3=document.querySelector('[data-step="3"]');
   const original4=document.querySelector('[data-step="4"]');
@@ -19,10 +18,11 @@
     <p class="step-helper">Esses dados ajudam a AION a calibrar volume, impacto, recuperação e progressão. A preferência muscular continua sendo definida por você.</p>
     <div class="field-row">
       <label>Idade
-        <input name="age" type="number" inputmode="numeric" min="13" max="100" value="${Number(state.profile.age)||34}" required>
+        <input name="age" type="number" inputmode="numeric" min="13" max="100" value="${state.profile.age||''}" placeholder="Ex.: 34" required>
       </label>
       <label>Sexo
         <select name="sex" required>
+          <option value="" ${!state.profile.sex?'selected':''} disabled>Selecione</option>
           <option value="male" ${state.profile.sex==='male'?'selected':''}>Masculino</option>
           <option value="female" ${state.profile.sex==='female'?'selected':''}>Feminino</option>
           <option value="other" ${state.profile.sex==='other'?'selected':''}>Outro / intersexo</option>
@@ -32,13 +32,13 @@
     </div>
     <div class="field-row">
       <label>Peso atual (kg)
-        <input name="weight" type="number" inputmode="decimal" min="30" max="350" step="0.1" value="${Number(state.profile.weight)||80}" required>
+        <input name="weight" type="number" inputmode="decimal" min="30" max="350" step="0.1" value="${state.profile.weight||''}" placeholder="Ex.: 80" required>
       </label>
       <label>Altura (cm)
-        <input name="height" type="number" inputmode="numeric" min="120" max="230" step="1" value="${Number(state.profile.height)||175}" required>
+        <input name="height" type="number" inputmode="numeric" min="120" max="230" step="1" value="${state.profile.height||''}" placeholder="Ex.: 175" required>
       </label>
     </div>
-    <div class="profile-note"><strong>Importante:</strong> sexo não define sozinho a divisão do treino. Objetivo, experiência, preferência de ênfase, disponibilidade e resposta aos treinos têm prioridade.</div>`;
+    <div class="profile-note"><strong>Personalização sem estereótipos:</strong> o sexo informado entra como contexto fisiológico, mas o app não presume que uma mulher deva treinar inferiores ou que um homem deva treinar superiores. Seu objetivo e a ênfase escolhida têm prioridade.</div>`;
   original2?.before(physical);
 
   const goalSelect=form.querySelector('select[name="goal"]');
@@ -65,11 +65,10 @@
   form.onsubmit=e=>{
     e.preventDefault();
     const fd=new FormData(e.currentTarget);
-    const age=Math.max(13,Math.min(100,Number(fd.get('age'))||18));
-    const weight=Math.max(30,Math.min(350,Number(fd.get('weight'))||70));
-    const height=Math.max(120,Math.min(230,Number(fd.get('height'))||170));
+    const age=Number(fd.get('age')),weight=Number(fd.get('weight')),height=Number(fd.get('height'));
+    if(!Number.isFinite(age)||age<13||age>100||!Number.isFinite(weight)||weight<30||weight>350||!Number.isFinite(height)||height<120||height>230){toast('Revise idade, peso e altura.');return;}
     state.profile={...state.profile,
-      age,weight,height,sex:fd.get('sex')||'prefer_not',
+      age,weight,height,sex:fd.get('sex')||'prefer_not',profileVersion:2,
       mode:fd.get('mode'),goal:fd.get('goal'),level:fd.get('level'),priorityMuscle:fd.get('priorityMuscle'),
       days:+fd.get('days'),minutes:+fd.get('minutes'),location:fd.get('location'),runLevel:fd.get('runLevel'),easyPace:fd.get('easyPace')||'5:30'
     };
@@ -85,11 +84,7 @@
     if(state.profile.goal==='weight_loss'){
       state.plan.filter(x=>x.type==='strength').forEach(day=>{
         day.goalTag='Emagrecimento';
-        day.exercises=day.exercises.map((ex,index)=>({
-          ...ex,
-          // Compostos preservam descanso suficiente; acessórios ganham maior densidade.
-          rest:index<2?Math.max(90,ex.rest-15):Math.max(45,ex.rest-15)
-        }));
+        day.exercises=day.exercises.map((ex,index)=>({...ex,rest:index<2?Math.max(90,ex.rest-15):Math.max(45,ex.rest-15)}));
       });
       save();
     }
@@ -105,4 +100,6 @@
   };
 
   showStep();
+  const missingPhysical=state.onboarded&&(!state.profile.age||!state.profile.weight||!state.profile.height||!state.profile.sex||state.profile.profileVersion!==2);
+  if(missingPhysical)setTimeout(()=>{toast('Atualizamos seu perfil. Complete idade, peso, altura e sexo para recalibrar o plano.');openOnboarding();},500);
 })();
