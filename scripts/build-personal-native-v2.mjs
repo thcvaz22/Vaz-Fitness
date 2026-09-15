@@ -16,6 +16,7 @@ const copies=[
   ['personal/exercise-catalog-v4.js',`${out}/exercise-catalog-v4.js`],
   ['personal/coach-tools-v4.css',`${out}/coach-tools-v4.css`],
   ['personal/coach-tools-v4.js',`${out}/coach-tools-v4.js`],
+  ['personal/plans-v5.js',`${out}/plans-v5.js`],
   ['personal/manifest.webmanifest',`${out}/manifest.webmanifest`],
   ['personal/icon.svg',`${out}/icon.svg`]
 ];
@@ -24,4 +25,4 @@ for(const [src,dst] of copies){if(!existsSync(src))throw new Error(`Arquivo ause
 let html=await readFile(`${out}/index.html`,'utf8');
 html=html.replace('<script src="./app-v2.js"></script>',`<script>window.VAZ_PERSONAL_NATIVE=true;window.VAZ_API_BASE='https://vaz-fitness.vercel.app';document.documentElement.classList.add('native-app');</script>\n  <script src="./app-v2.js"></script>`);
 await writeFile(`${out}/index.html`,html);
-console.log('Vaz Personal 2.0 native bundle premium + coach tools v4 + catálogo offline pronto.');
+console.log('Vaz Personal 2.0 native bundle premium + coach tools v4 + planos v5 + catálogo offline pronto.');
