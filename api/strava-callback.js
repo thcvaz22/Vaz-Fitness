@@ -8,7 +8,7 @@ export default async function handler(req,res){
     if(!code||!state)return res.status(400).send('Autorização do Strava incompleta.');
     const parsed=readState(state);
     const token=await exchangeCode(code);
-    await saveConnection(parsed.installationId,token);
+    await saveConnection(parsed.installationId,token,parsed.userId||null);
     res.writeHead(302,{Location:parsed.returnTo||'/?strava=connected','Cache-Control':'no-store'});res.end();
   }catch(err){
     console.error('strava callback',err);
