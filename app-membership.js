@@ -15,10 +15,28 @@
     if(!r.ok){const err=new Error(data.message||'Não foi possível acessar sua conta.');err.code=data.error||'';err.status=r.status;throw err}
     return data;
   }
+  function tail(list,max){return Array.isArray(list)?list.slice(-max):[]}
   function sanitizeStateForCloud(){
     const copy=JSON.parse(JSON.stringify(state));
     delete copy.chat;delete copy.current;delete copy.currentRun;
-    copy.runSessions=(copy.runSessions||[]).map(r=>{const x={...r};delete x.route;return x;});
+    copy.sessions=tail(copy.sessions,220);
+    copy.runSessions=tail(copy.runSessions,180).map(r=>{const x={...r};delete x.route;return x;});
+    copy.calendarEvents=tail(copy.calendarEvents,730);
+    copy.bodyMeasurements=tail(copy.bodyMeasurements,120);
+    copy.readinessCheckins=tail(copy.readinessCheckins,120);
+    copy.skipped=tail(copy.skipped,180);
+    // Segunda compactação defensiva: o histórico local continua completo, mas o snapshot de nuvem
+    // precisa permanecer pequeno para que centenas de atletas não façam o banco crescer sem limite.
+    try{
+      if(new Blob([JSON.stringify(copy)]).size>750000){
+        copy.sessions=tail(copy.sessions,140);
+        copy.runSessions=tail(copy.runSessions,120);
+        copy.calendarEvents=tail(copy.calendarEvents,420);
+        copy.bodyMeasurements=tail(copy.bodyMeasurements,80);
+        copy.readinessCheckins=tail(copy.readinessCheckins,80);
+        copy.skipped=tail(copy.skipped,120);
+      }
+    }catch{}
     return copy;
   }
   function applyCloudState(remote){
