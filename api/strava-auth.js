@@ -1,4 +1,4 @@
-import { makeState, requireStravaConfig, validInstallationId } from './strava-lib.js';
+import { makeState, requireStravaConfig, validInstallationId } from '../lib/strava-lib.js';
 
 export default async function handler(req,res){
   try{
