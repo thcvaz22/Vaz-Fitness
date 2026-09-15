@@ -1,4 +1,5 @@
 {
+  "regions": ["pdx1"],
   "functions": {
     "api/*.js": {
       "memory": 256,
@@ -8,7 +9,8 @@
   "rewrites": [
     { "source": "/api/admin-v2", "destination": "/api/health?scope=admin" },
     { "source": "/api/training-library", "destination": "/api/health?scope=library" },
-    { "source": "/api/personal-tools", "destination": "/api/health?scope=tools" }
+    { "source": "/api/personal-tools", "destination": "/api/health?scope=tools" },
+    { "source": "/api/strava-webhook", "destination": "/api/health?scope=strava_webhook" }
   ],
   "headers": [
     {
