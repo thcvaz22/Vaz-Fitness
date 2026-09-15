@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 
-const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 
 const responseSchema = {
   type: 'object',
@@ -49,8 +49,7 @@ export default async function handler(req, res){
       config: {
         systemInstruction: systemInstruction(),
         responseMimeType: 'application/json',
-        responseSchema,
-        temperature: 0.45
+        responseSchema
       }
     });
 
