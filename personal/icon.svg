@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Ícone Vaz Personal">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff27a"/>
+      <stop offset="0.22" stop-color="#ffd42a"/>
+      <stop offset="0.62" stop-color="#f5b400"/>
+      <stop offset="1" stop-color="#d88d00"/>
+    </linearGradient>
+    <linearGradient id="bar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff071"/>
+      <stop offset="0.34" stop-color="#ffc928"/>
+      <stop offset="0.72" stop-color="#e9a100"/>
+      <stop offset="1" stop-color="#f8bd10"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#050505"/>
+  <g>
+    <rect x="154" y="236" width="204" height="40" rx="18" fill="url(#bar)"/>
+    <rect x="145" y="151" width="28" height="210" rx="14" fill="#090909"/>
+    <rect x="122" y="151" width="50" height="210" rx="24" fill="url(#gold)"/>
+    <rect x="78" y="177" width="42" height="158" rx="21" fill="url(#gold)"/>
+    <rect x="47" y="206" width="30" height="100" rx="15" fill="url(#bar)"/>
+    <rect x="339" y="151" width="28" height="210" rx="14" fill="#090909"/>
+    <rect x="340" y="151" width="50" height="210" rx="24" fill="url(#gold)"/>
+    <rect x="392" y="177" width="42" height="158" rx="21" fill="url(#gold)"/>
+    <rect x="435" y="206" width="30" height="100" rx="15" fill="url(#bar)"/>
+  </g>
+</svg>
