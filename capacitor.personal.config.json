@@ -1,0 +1,14 @@
+{
+  "appId": "com.vazpersonal.app",
+  "appName": "Vaz Personal",
+  "webDir": "www-personal",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "useLegacyBridge": true
+  },
+  "ios": {
+    "contentInset": "automatic"
+  }
+}
