@@ -1,6 +1,8 @@
 import { getConnection, validInstallationId } from './strava-lib.js';
+import { applyCors } from './cors.js';
 
 export default async function handler(req,res){
+  if(applyCors(req,res))return;
   try{
     const installationId=String(req.query?.installationId||'');
     if(!validInstallationId(installationId))return res.status(200).json({connected:false});
