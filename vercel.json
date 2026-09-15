@@ -7,7 +7,8 @@
   },
   "rewrites": [
     { "source": "/api/admin-v2", "destination": "/api/health?scope=admin" },
-    { "source": "/api/training-library", "destination": "/api/health?scope=library" }
+    { "source": "/api/training-library", "destination": "/api/health?scope=library" },
+    { "source": "/api/personal-tools", "destination": "/api/health?scope=tools" }
   ],
   "headers": [
     {
