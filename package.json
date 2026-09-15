@@ -1,0 +1,13 @@
+{
+  "name": "vaz-fitness",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Vaz Fitness — treino adaptativo com AION IA",
+  "dependencies": {
+    "@google/genai": "2.22.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
