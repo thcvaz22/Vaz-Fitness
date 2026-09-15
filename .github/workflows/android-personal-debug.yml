@@ -7,13 +7,13 @@ on:
     paths:
       - 'personal/**'
       - 'api/personal-ops.js'
-      - 'api/personal-tools.js'
       - 'api/personal-auth.js'
       - 'api/health.js'
       - 'api/vf.js'
       - 'api/branding.js'
       - 'lib/admin-handler.js'
       - 'lib/training-library-handler.js'
+      - 'lib/personal-tools-handler.js'
       - 'lib/exercise-catalog-v4.js'
       - 'lib/cors.js'
       - 'capacitor.personal.config.json'
@@ -38,7 +38,7 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Validate Vaz Personal JavaScript
-        run: node --check personal/app-v2.js && node --check personal/training-library-v2.js && node --check personal/coach-tools-v4.js && node --check api/personal-auth.js && node --check api/health.js && node --check api/personal-ops.js && node --check api/personal-tools.js && node --check lib/admin-handler.js && node --check lib/training-library-handler.js && node --check lib/exercise-catalog-v4.js
+        run: node --check personal/app-v2.js && node --check personal/training-library-v2.js && node --check personal/coach-tools-v4.js && node --check api/personal-auth.js && node --check api/health.js && node --check api/personal-ops.js && node --check lib/admin-handler.js && node --check lib/training-library-handler.js && node --check lib/personal-tools-handler.js && node --check lib/exercise-catalog-v4.js
       - name: Prepare Vaz Personal native bundle
         run: node scripts/build-personal-native-v2.mjs
       - name: Validate native bundle
