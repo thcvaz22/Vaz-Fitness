@@ -8,6 +8,7 @@ function getInstallationId(){
   }
   return id;
 }
+function apiEndpoint(path){return `${window.VAZ_API_BASE||''}${path}`;}
 function stravaState(){
   state.strava=state.strava||{connected:false,autoSync:true,athleteName:null,status:'idle'};
   return state.strava;
@@ -15,15 +16,16 @@ function stravaState(){
 async function refreshStravaStatus(){
   const s=stravaState();s.status='loading';
   try{
-    const r=await fetch(`/api/strava-status?installationId=${encodeURIComponent(getInstallationId())}`,{cache:'no-store'});
+    const r=await fetch(apiEndpoint(`/api/strava-status?installationId=${encodeURIComponent(getInstallationId())}`),{cache:'no-store'});
     const data=await r.json();
     Object.assign(s,{connected:!!data.connected,autoSync:data.autoSync!==false,athleteName:data.athleteName||null,status:'ready'});
   }catch{Object.assign(s,{status:'error'});}
   save();if(activeView==='profile')render();
   if(s.connected)syncPendingStravaRuns();
 }
-function connectStrava(){
-  location.href=`/api/strava-auth?installationId=${encodeURIComponent(getInstallationId())}`;
+async function connectStrava(){
+  if(window.VAZ_NATIVE&&window.VazNative?.openStravaAuth){return window.VazNative.openStravaAuth(getInstallationId());}
+  location.href=apiEndpoint(`/api/strava-auth?installationId=${encodeURIComponent(getInstallationId())}`);
 }
 async function syncRunToStrava(session,{silent=false}={}){
   const s=stravaState();
@@ -31,7 +33,7 @@ async function syncRunToStrava(session,{silent=false}={}){
   if(session.stravaSync==='synced')return true;
   session.stravaSync='syncing';save();
   try{
-    const r=await fetch('/api/strava-upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({installationId:getInstallationId(),session})});
+    const r=await fetch(apiEndpoint('/api/strava-upload'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({installationId:getInstallationId(),session})});
     const data=await r.json();
     if(!r.ok||!data.synced)throw new Error(data.error||'Não foi possível sincronizar.');
     session.stravaSync='synced';session.stravaResult=data.result||null;save();
