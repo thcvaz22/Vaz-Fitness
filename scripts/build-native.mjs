@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { build } from 'esbuild';
 
 // Keep the native package aligned with the same modular assets served by Vercel.
-const files=['index.html','styles.css','app-core.js','app-pt-guides.js','app-ui.js','app-training.js','app-ai.js','app-running.js','app-profile-v2.js','app-onboarding-v3.js','app-calibration.js','app-calendar.js','app-integrations.js','app-workout-exit.js','manifest.webmanifest','icon.svg','sw.js'];
+const files=['index.html','styles.css','app-core.js','app-pt-guides.js','app-ui.js','app-training.js','app-ai.js','app-running.js','app-profile-v2.js','app-onboarding-v3.js','app-calibration.js','app-calendar.js','app-integrations.js','app-workout-exit.js','app-training-details.js','manifest.webmanifest','icon.svg','sw.js'];
 await rm('www',{recursive:true,force:true});
 await mkdir('www',{recursive:true});
 for(const file of files){if(existsSync(file))await copyFile(file,`www/${file}`);}
