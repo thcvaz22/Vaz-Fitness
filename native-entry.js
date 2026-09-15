@@ -10,7 +10,6 @@ window.VazNative.openStravaAuth=async installationId=>{
   await Browser.open({url});
 };
 
-// Retorna ao Vaz Fitness após o OAuth do Strava.
 App.addListener('appUrlOpen',async ({url})=>{
   if(!url?.startsWith('vazfitness://'))return;
   try{await Browser.close();}catch{}
@@ -26,24 +25,20 @@ const browserStopRun=window.stopRunTracking;
 
 window.startGpsWatch=async function(){
   const r=state.currentRun;if(!r)return;
-  // Evita deixar um watch do navegador rodando em paralelo no app nativo.
   if(runWatchId!==null&&navigator.geolocation){try{navigator.geolocation.clearWatch(runWatchId)}catch{}runWatchId=null;}
   r.gpsStatus='Solicitando GPS nativo…';save();updateRunMetrics();
   try{
-    const permissions=await BackgroundGeolocation.requestPermissions({permissions:['location','notification']});
-    if(permissions.location==='denied'){
-      r.gpsStatus='GPS sem permissão';save();updateRunMetrics();return;
-    }
     await BackgroundGeolocation.start({
       backgroundTitle:'Vaz Fitness — corrida em andamento',
       backgroundMessage:'GPS ativo para registrar sua corrida mesmo com a tela bloqueada.',
-      requestPermissions:false,
+      requestPermissions:true,
       stale:false,
-      distanceFilter:3,
-      minIntervalMs:1000
+      distanceFilter:3
     },(location,error)=>{
       if(error){
-        r.gpsStatus=error.code==='NOT_AUTHORIZED'?'GPS sem permissão':'GPS nativo indisponível';save();updateRunMetrics();return;
+        const denied=['NOT_AUTHORIZED','PERMISSION_DENIED'].includes(error.code);
+        r.gpsStatus=denied?'GPS sem permissão':'GPS nativo indisponível';
+        save();updateRunMetrics();return;
       }
       if(!location||!state.currentRun||state.currentRun.status!=='running')return;
       onRunPosition({
@@ -64,7 +59,6 @@ window.stopRunTracking=function(){
   return browserStopRun.apply(this,arguments);
 };
 
-// Caso o app seja reaberto durante uma corrida, religa o rastreamento nativo.
 if(state.currentRun?.status==='running'){
   BackgroundGeolocation.stop().catch(()=>{}).finally(()=>window.startGpsWatch());
 }
