@@ -8,13 +8,15 @@ on:
       - 'personal/**'
       - 'api/personal-ops.js'
       - 'api/personal-auth.js'
-      - 'api/personal-auth-v2.js'
-      - 'api/admin-v2.js'
-      - 'api/training-library.js'
+      - 'api/health.js'
       - 'api/vf.js'
       - 'api/branding.js'
+      - 'lib/admin-handler.js'
+      - 'lib/training-library-handler.js'
+      - 'lib/cors.js'
       - 'capacitor.personal.config.json'
       - 'scripts/build-personal-native-v2.mjs'
+      - 'vercel.json'
       - 'package.json'
       - '.github/workflows/android-personal-debug.yml'
 
@@ -33,7 +35,7 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Validate Vaz Personal 2.0 JavaScript
-        run: node --check personal/app-v2.js && node --check personal/training-library-v2.js && node --check api/personal-auth.js && node --check api/personal-auth-v2.js && node --check api/admin-v2.js && node --check api/personal-ops.js && node --check api/training-library.js
+        run: node --check personal/app-v2.js && node --check personal/training-library-v2.js && node --check api/personal-auth.js && node --check api/health.js && node --check api/personal-ops.js && node --check lib/admin-handler.js && node --check lib/training-library-handler.js
       - name: Prepare Vaz Personal 2.0 bundle
         run: node scripts/build-personal-native-v2.mjs
       - name: Validate native bundle
