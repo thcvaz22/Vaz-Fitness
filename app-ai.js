@@ -93,5 +93,74 @@ document.getElementById('onboardingForm').onsubmit=e=>{
 document.querySelectorAll('[data-effort]').forEach(b=>b.onclick=()=>applyEffort(b.dataset.effort));
 document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>setView(b.dataset.nav));
 
+// Mobile UX fixes: scrollable dialogs and clearer live-workout fields.
+(function installMobileUxFixes(){
+  const style=document.createElement('style');
+  style.id='vaz-mobile-ux-fixes';
+  style.textContent=`
+    .dialog{
+      max-height:calc(100dvh - 20px)!important;
+      overflow-y:auto!important;
+      overscroll-behavior:contain;
+      -webkit-overflow-scrolling:touch;
+      scrollbar-gutter:stable;
+    }
+    .onboarding-dialog,.media-dialog,.summary-dialog,.effort-dialog{max-height:94dvh!important}
+    .onboarding-form,.effort-content,.summary-wrap,#mediaContent{padding-bottom:max(28px,env(safe-area-inset-bottom))}
+    .onboarding-dialog .dialog-actions{
+      position:sticky;
+      bottom:0;
+      z-index:5;
+      background:linear-gradient(180deg,rgba(255,255,255,.78),#fff 28%);
+      border-top:1px solid var(--line);
+      padding:14px 0 max(14px,env(safe-area-inset-bottom));
+      margin-top:12px;
+    }
+    .live-shell{padding-bottom:120px}
+    .set-table-head{
+      display:grid;
+      grid-template-columns:42px minmax(0,1fr) minmax(0,1fr) 48px;
+      gap:8px;
+      align-items:end;
+      padding:0 9px 4px;
+      margin-top:2px;
+      color:#aaa;
+      font-size:10px;
+      line-height:1.15;
+      font-weight:800;
+      letter-spacing:.01em;
+    }
+    .set-table-head span:nth-child(4){text-align:center}
+    .set-row{grid-template-columns:42px minmax(0,1fr) minmax(0,1fr) 48px!important}
+    .set-index{font-weight:800;color:#fff!important;text-align:center}
+    @media(max-width:520px){
+      .dialog{max-width:calc(100% - 20px)!important;border-radius:26px}
+      .onboarding-form{padding:26px 22px}
+      .dialog-head{gap:14px}
+      .dialog-head h1{font-size:29px;line-height:1.1}
+      .live-card{padding:22px 18px}
+      .set-table-head{grid-template-columns:36px minmax(0,1fr) minmax(0,1fr) 44px;padding-inline:6px;font-size:9px}
+      .set-row{grid-template-columns:36px minmax(0,1fr) minmax(0,1fr) 44px!important;padding:8px 6px!important}
+      .set-row input{padding:10px 8px!important;text-align:center}
+      .set-check{width:36px;height:36px}
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
+function renderLive(){
+  const c=state.current; const ex=c.exercises[c.currentIndex]; if(!ex)return '';
+  return `<section class="live-shell"><div class="timer-head"><div><span class="eyebrow">TREINO AO VIVO</span><h2 style="margin:4px 0">${state.plan.find(x=>x.id===c.planId)?.name||'Treino'}</h2></div><div class="live-timer" id="liveTimer">${formatTime(seconds)}</div></div>
+  <div class="live-card"><span class="eyebrow">EXERCÍCIO ${c.currentIndex+1} DE ${c.exercises.length}</span><h1 class="exercise-title">${ex.name}</h1><div class="muscle-chips"><span>${muscleNames[ex.muscle]}</span>${ex.secondary.map(m=>`<span>${muscleNames[m]||m}</span>`).join('')}${ex.priority?'<span>★ prioridade</span>':''}</div>
+  <div class="video-placeholder"><button class="play-btn" data-video-id="${ex.id}" title="Ver execução">▶</button><div class="video-label"><strong>Ver execução</strong><span>Ilustração animada + instruções</span></div></div>
+  <div class="set-table"><div class="set-table-head" aria-hidden="true"><span>Série</span><span>Peso (kg)</span><span>Repetições</span><span>Feito</span></div>${Array.from({length:ex.sets},(_,i)=>renderSetRow(ex,i)).join('')}</div>
+  <div class="rest-banner"><span>Descanso sugerido</span><strong>${ex.rest}s</strong></div>
+  <div class="live-actions"><button class="btn ghost" data-finish-early>Encerrar treino</button><button class="btn primary" data-complete-exercise="${ex.id}">Concluir exercício</button></div></div></section>`
+}
+function renderSetRow(ex,i){
+  const prev=ex.completedSets?.[i];
+  return `<div class="set-row"><span class="set-index" aria-label="Série ${i+1}">${i+1}</span><input type="number" inputmode="decimal" step="0.5" value="${prev?.load ?? ex.load}" data-set-load="${i}" aria-label="Peso em quilogramas da série ${i+1}" title="Peso (kg)"><input type="number" inputmode="numeric" value="${prev?.reps ?? repTarget(ex.reps)}" data-set-reps="${i}" aria-label="Repetições da série ${i+1}" title="Repetições"><button class="set-check ${prev?'done':''}" data-set-done="${i}" aria-label="Marcar série ${i+1} como concluída">${prev?'✓':'○'}</button></div>`
+}
+
 if(!state.onboarded || !state.plan.length){ if(state.onboarded&&!state.plan.length)generatePlan(); setTimeout(()=>{if(!state.onboarded)openOnboarding();},250); }
 render();
