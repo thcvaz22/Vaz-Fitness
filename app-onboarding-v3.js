@@ -39,7 +39,6 @@
   function selectedMode(){return form.querySelector('input[name="mode"]:checked')?.value||state.profile.mode||'hybrid';}
   function levelLabel(value){return value==='advanced'?'Avançado':value==='beginner'?'Iniciante':'Intermediário';}
 
-  // Mantém a modalidade atual marcada ao reabrir a avaliação.
   const currentMode=state.profile.mode||'hybrid';
   const currentModeInput=form.querySelector(`input[name="mode"][value="${currentMode}"]`);
   if(currentModeInput)currentModeInput.checked=true;
@@ -119,7 +118,6 @@
   style.textContent=`.modality-level-panel{margin-top:14px}.modality-level-panel>[data-hybrid-focus]{display:block;margin-top:14px}.modality-levels{align-items:end}.mode-helper{font-size:11px;color:var(--muted);line-height:1.5;margin-top:8px}.level-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.level-summary-grid>div{padding:13px;border:1px solid var(--line);border-radius:16px;background:#fafafa}.level-summary-grid span{display:block;color:var(--muted);font-size:10px}.level-summary-grid strong{display:block;margin-top:4px;font-size:14px}@media(max-width:560px){.level-summary-grid{grid-template-columns:1fr}.modality-levels{grid-template-columns:1fr}}`;
   document.head.appendChild(style);
 
-  // Salva os níveis de cada modalidade separadamente e mantém os campos legados compatíveis.
   form.onsubmit=e=>{
     e.preventDefault();
     const fd=new FormData(e.currentTarget);
@@ -145,7 +143,6 @@
   const previousGoalName=goalName;
   goalName=function(goal){return goal==='42k'?'Maratona':previousGoalName(goal);};
 
-  // Ajusta volume e sessões conforme modalidade e nível sem prescrever carga inicial arbitrária.
   const previousGeneratePlan=generatePlan;
   generatePlan=function(){
     previousGeneratePlan();
@@ -183,16 +180,29 @@
     });
 
     const days=Math.max(2,Math.min(6,+p.days||4));
-    if(p.mode==='run'){
-      // Corrida pura: nenhum treino de musculação entra no plano semanal.
-      if(!runs.length){
-        const preferred=[1,2,3,4,5,6,0],today=new Date().getDay(),start=Math.max(0,preferred.indexOf(today));
-        const templates=runningLevel==='beginner'?[['Corrida leve',25,'Leve'],['Caminhada + trote',30,'Leve'],['Corrida contínua',35,'Moderado']]:[['Rodagem leve',35,'Leve'],['Intervalado',45,'Forte'],['Longão',60,'Moderado'],['Tempo run',40,'Moderado'],['Progressivo',45,'Moderado']];
-        for(let i=0;i<days;i++){
-          const t=templates[i%templates.length];
-          runs.push({id:`r-v3-${Date.now()}-${i}`,type:'run',name:t[0],day:preferred[(start+i*2)%7],duration:t[1],intensity:t[2],pace:suggestRunPace(t[2]),status:'pending',level:runningLevel});
-        }
+    const templates=runningLevel==='beginner'
+      ? [['Corrida leve',25,'Leve'],['Caminhada + trote',30,'Leve'],['Corrida contínua',35,'Moderado']]
+      : runningLevel==='advanced'
+        ? [['Rodagem regenerativa',40,'Leve'],['Intervalado',50,'Forte'],['Longão',75,'Moderado'],['Tempo run',45,'Forte'],['Progressivo',50,'Moderado']]
+        : [['Rodagem leve',35,'Leve'],['Intervalado',45,'Forte'],['Longão',60,'Moderado'],['Tempo run',40,'Moderado'],['Progressivo',45,'Moderado']];
+
+    function ensureRunCount(count,avoidDays=[]){
+      const preferred=[1,2,3,4,5,6,0];
+      while(runs.length<count){
+        const i=runs.length;
+        const t=templates[i%templates.length];
+        const used=new Set([...avoidDays,...runs.map(r=>r.day)]);
+        const day=preferred.find(d=>!used.has(d)) ?? preferred[i%preferred.length];
+        runs.push({id:`r-v3-${Date.now()}-${i}`,type:'run',name:t[0],day,duration:t[1],intensity:t[2],pace:suggestRunPace(t[2]),status:'pending',level:runningLevel});
       }
+      if(p.goal==='42k'&&runs.length){
+        const idx=Math.min(2,runs.length-1);
+        runs[idx]={...runs[idx],name:'Longão — base para maratona',duration:runningLevel==='beginner'?45:runningLevel==='advanced'?75:60,intensity:'Moderado',pace:suggestRunPace('Moderado')};
+      }
+    }
+
+    if(p.mode==='run'){
+      ensureRunCount(days);
       state.plan=runs.slice(0,days);
     }else if(p.mode==='strength'){
       state.plan=strength.slice(0,days);
@@ -201,7 +211,9 @@
       let desiredRuns=focus==='strength'?1:focus==='running'?Math.min(3,Math.max(2,days-2)):(days>=4?2:1);
       desiredRuns=Math.min(desiredRuns,Math.max(1,days-1));
       const desiredStrength=Math.max(1,days-desiredRuns);
-      state.plan=[...strength.slice(0,desiredStrength),...runs.slice(0,desiredRuns)];
+      const selectedStrength=strength.slice(0,desiredStrength);
+      ensureRunCount(desiredRuns,selectedStrength.map(s=>s.day));
+      state.plan=[...selectedStrength,...runs.slice(0,desiredRuns)];
     }
     state.plan.sort((a,b)=>orderFromToday(a.day)-orderFromToday(b.day));
     save();
@@ -223,7 +235,6 @@
     return html.replace(/<\/section>\s*$/,`${card}</section>`);
   };
 
-  // Usuários já cadastrados recebem a nova avaliação apenas uma vez.
   if(state.onboarded&&state.profile.onboardingVersion!==3){
     setTimeout(()=>{toast('Atualizamos a avaliação: agora corrida e musculação têm níveis separados.');openOnboarding();},700);
   }
