@@ -57,7 +57,7 @@ A progressão real deve considerar simultaneamente carga, repetições, históri
 ## Integração externa — Gemini
 - A chave fica exclusivamente em `GEMINI_API_KEY` no ambiente server-side.
 - O frontend chama `POST /api/aion` e envia somente contexto necessário ao treino.
-- Modelo padrão atual: `gemini-3.6-flash`, configurável por `GEMINI_MODEL`.
+- Modelo padrão atual: `gemini-3.8-flash`, configurável por `GEMINI_MODEL`.
 - A resposta é estruturada em `message`, `intent` e `recommendations`.
 - Se a API externa falhar, o app preserva um motor local de orientação para não quebrar a experiência.
 - A AION não executará alterações sensíveis no plano silenciosamente: futuras ações estruturadas devem pedir confirmação antes de gravar mudanças.
