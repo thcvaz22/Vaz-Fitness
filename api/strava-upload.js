@@ -1,6 +1,8 @@
 import { getConnection, uploadRun, validInstallationId } from './strava-lib.js';
+import { applyCors } from './cors.js';
 
 export default async function handler(req,res){
+  if(applyCors(req,res))return;
   if(req.method!=='POST')return res.status(405).json({error:'Método não permitido'});
   try{
     const {installationId,session}=req.body||{};
