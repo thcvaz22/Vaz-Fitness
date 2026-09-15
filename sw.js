@@ -1,5 +1,5 @@
-const CACHE='vaz-fitness-v7';
-const ASSETS=['./','./index.html','./styles.css','./app-core.js','./app-pt-guides.js','./app-ui.js','./app-training.js','./app-ai.js','./app-running.js','./app-profile-v2.js','./app-integrations.js','./manifest.webmanifest','./icon.svg'];
+const CACHE='vaz-fitness-v8';
+const ASSETS=['./','./index.html','./styles.css','./app-core.js','./app-pt-guides.js','./app-ui.js','./app-training.js','./app-ai.js','./app-running.js','./app-profile-v2.js','./app-calibration.js','./app-integrations.js','./manifest.webmanifest','./icon.svg'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));
