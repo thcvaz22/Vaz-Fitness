@@ -9,7 +9,7 @@ on:
       - 'index.html'
       - 'styles.css'
       - 'native-entry.js'
-      - 'capacitor.config.ts'
+      - 'capacitor.config.json'
       - 'scripts/**'
       - 'package.json'
       - '.github/workflows/android-debug.yml'
