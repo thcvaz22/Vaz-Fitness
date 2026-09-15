@@ -17,7 +17,7 @@
   physical.dataset.step='2';
   physical.innerHTML=`
     <h2>Conte um pouco sobre você</h2>
-    <p class="step-helper">Esses dados ajudam a AION a calibrar volume, impacto, recuperação e progressão. A preferência muscular continua sendo definida por você.</p>
+    <p class="step-helper">Esses dados ajudam a AION a calibrar volume, impacto, recuperação e progressão.</p>
     <label>Nome
       <input name="name" type="text" maxlength="40" value="${escapeHtml(state.profile.name||'')}" placeholder="Como quer ser chamado?" required>
     </label>
@@ -42,8 +42,7 @@
       <label>Altura (cm)
         <input name="height" type="number" inputmode="numeric" min="120" max="230" step="1" value="${state.profile.height||''}" placeholder="Ex.: 175" required>
       </label>
-    </div>
-    <div class="profile-note"><strong>Personalização sem estereótipos:</strong> o sexo informado entra como contexto fisiológico, mas o app não presume que uma mulher deva treinar inferiores ou que um homem deva treinar superiores. Seu objetivo e a ênfase escolhida têm prioridade.</div>`;
+    </div>`;
   original2?.before(physical);
 
   const goalSelect=form.querySelector('select[name="goal"]');
@@ -52,7 +51,7 @@
   }
 
   const style=document.createElement('style');
-  style.textContent=`.step-helper{color:var(--muted);margin:-8px 0 18px;line-height:1.5}.profile-note{margin-top:16px;padding:14px 16px;border-radius:16px;background:#fff8d6;border:1px solid #ffe47b;color:#615000;font-size:12px;line-height:1.5}.physical-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}.physical-summary>div{background:#fafafa;border:1px solid var(--line);border-radius:16px;padding:13px}.physical-summary span{display:block;color:var(--muted);font-size:10px}.physical-summary strong{font-size:15px}@media(max-width:560px){.physical-summary{grid-template-columns:1fr 1fr}}`;
+  style.textContent=`.step-helper{color:var(--muted);margin:-8px 0 18px;line-height:1.5}.physical-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}.physical-summary>div{background:#fafafa;border:1px solid var(--line);border-radius:16px;padding:13px}.physical-summary span{display:block;color:var(--muted);font-size:10px}.physical-summary strong{font-size:15px}@media(max-width:560px){.physical-summary{grid-template-columns:1fr 1fr}}`;
   document.head.appendChild(style);
 
   showStep=function(){
