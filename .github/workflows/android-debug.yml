@@ -8,6 +8,7 @@ on:
       - 'app-*.js'
       - 'index.html'
       - 'styles.css'
+      - 'icon.svg'
       - 'native-entry.js'
       - 'capacitor.config.json'
       - 'scripts/**'
@@ -36,6 +37,8 @@ jobs:
         run: node scripts/configure-native.mjs
       - name: Sync Capacitor
         run: npx cap sync android
+      - name: Apply Vaz Fitness launcher icon
+        run: node scripts/configure-app-icon.mjs fitness
       - name: Build debug APK
         working-directory: android
         run: chmod +x gradlew && ./gradlew assembleDebug
