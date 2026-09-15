@@ -5,6 +5,8 @@ import { applyCors } from './cors.js';
 
 const MODEL=process.env.GEMINI_MODEL||'gemini-3.8-flash';
 const CYCLE_DAYS=new Set([30,45,60,90]);
+const DEFAULT_PERSONAL_RPM=3;
+const DEFAULT_PERSONAL_RPD=40;
 
 function db(){if(!process.env.DATABASE_URL)throw new Error('DATABASE_URL não configurada.');return neon(process.env.DATABASE_URL)}
 function tokenHash(token){return crypto.createHash('sha256').update(String(token)).digest('hex')}
@@ -13,6 +15,7 @@ function sendError(res,status,message,code='error'){return res.status(status).js
 function isoDate(v){const m=String(v||'').match(/^\d{4}-\d{2}-\d{2}$/);return m?m[0]:null}
 function money(v){if(v===''||v==null)return null;const n=Number(v);return Number.isFinite(n)&&n>=0&&n<=99999999?n:null}
 function todayISO(){return new Date().toISOString().slice(0,10)}
+function envInt(name,fallback,min,max){const n=Number(process.env[name]);return Number.isFinite(n)?Math.max(min,Math.min(max,Math.floor(n))):fallback}
 function addMonths(dateStr,months=1,preferredDay=null){
   const [y,m,d]=String(dateStr).split('-').map(Number);const day=preferredDay||d;
   const first=new Date(Date.UTC(y,m-1+months,1));
@@ -22,14 +25,23 @@ function addMonths(dateStr,months=1,preferredDay=null){
 async function authenticate(req){
   const header=String(req.headers?.authorization||'');const token=header.startsWith('Bearer ')?header.slice(7).trim():'';
   if(!token)return null;const sql=db();
-  const rows=await sql`SELECT u.id,u.role,u.name,u.public_code FROM vf_sessions s JOIN vf_users u ON u.id=s.user_id WHERE s.token_hash=${tokenHash(token)} AND s.expires_at>now() LIMIT 1`;
-  const user=rows[0]||null;if(!user||user.role!=='personal')return null;return {sql,user};
+  const rows=await sql`SELECT u.id,u.role,u.name,u.public_code,u.account_status FROM vf_sessions s JOIN vf_users u ON u.id=s.user_id WHERE s.token_hash=${tokenHash(token)} AND s.expires_at>now() LIMIT 1`;
+  const user=rows[0]||null;if(!user||user.role!=='personal'||user.account_status!=='approved')return null;return {sql,user};
 }
 async function linked(sql,personalId,athleteId){
   const rows=await sql`SELECT a.athlete_id,a.status,a.profile_submitted_at,u.name,u.public_code FROM vf_athlete_access a JOIN vf_users u ON u.id=a.athlete_id WHERE a.athlete_id=${athleteId} AND a.personal_id=${personalId} LIMIT 1`;
   return rows[0]||null;
 }
 async function audit(sql,actorId,athleteId,action,payload={}){try{await sql`INSERT INTO vf_audit_log (actor_id,athlete_id,action,payload) VALUES (${actorId},${athleteId},${action},CAST(${JSON.stringify(payload)} AS jsonb))`}catch{}}
+async function personalAionQuota(sql,personalId){
+  const rpm=envInt('AION_PERSONAL_RPM',DEFAULT_PERSONAL_RPM,1,30),rpd=envInt('AION_PERSONAL_RPD',DEFAULT_PERSONAL_RPD,5,500);
+  const rows=await sql`SELECT
+    count(*) FILTER (WHERE created_at>now()-interval '1 minute')::int AS minute_count,
+    count(*)::int AS day_count
+    FROM vf_audit_log
+    WHERE actor_id=${personalId} AND action='aion_plan_suggested' AND created_at>now()-interval '1 day'`;
+  const usage=rows[0]||{};return {ok:Number(usage.minute_count||0)<rpm&&Number(usage.day_count||0)<rpd,rpm,rpd};
+}
 function cycleInfo(row={}){
   const end=row.cycle_ends_at?new Date(row.cycle_ends_at):null;const now=new Date();
   const daysLeft=end?Math.ceil((end.getTime()-now.getTime())/86400000):null;
@@ -53,7 +65,8 @@ Regras: respeite modalidade, objetivo, níveis separados, disponibilidade semana
 
 export default async function handler(req,res){
   if(applyCors(req,res))return;
-  const auth=await authenticate(req);if(!auth)return sendError(res,401,'Sessão inválida.','unauthorized');
+  res.setHeader('Cache-Control','no-store');
+  const auth=await authenticate(req);if(!auth)return sendError(res,401,'Sessão inválida ou conta indisponível.','unauthorized');
   const {sql,user}=auth;const action=String(req.query?.action||req.body?.action||'').trim();
   try{
     if(req.method==='GET'&&action==='summary'){
@@ -108,13 +121,17 @@ export default async function handler(req,res){
     if(req.method==='POST'&&action==='suggest_plan'){
       if(!process.env.GEMINI_API_KEY)return sendError(res,503,'AION não configurada.','aion_not_configured');
       const athleteId=clean(req.body?.athleteId,120);const client=await linked(sql,user.id,athleteId);if(!client)return sendError(res,404,'Aluno não encontrado.','not_found');
+      const quota=await personalAionQuota(sql,user.id);if(!quota.ok){res.setHeader('Retry-After','60');return sendError(res,429,'A AION recebeu muitas gerações de treino em pouco tempo. Tente novamente em instantes.','aion_rate_limited')}
       const stateRows=await sql`SELECT state FROM vf_cloud_state WHERE user_id=${athleteId} LIMIT 1`;const planRows=await sql`SELECT plan,plan_version,cycle_days FROM vf_training_plans WHERE athlete_id=${athleteId} LIMIT 1`;const state=stateRows[0]?.state||{},currentPlan=planRows[0]?.plan||[];
       const context={profile:state.profile||{},goals:state.goals||{},bodyMeasurements:(state.bodyMeasurements||[]).slice(-12),readiness:(state.readinessCheckins||[]).slice(-10),recentStrength:(state.sessions||[]).slice(-12),recentRuns:(state.runSessions||[]).slice(-12),calendar:(state.calendarEvents||[]).slice(-60),currentPlan,cycleDays:Number(planRows[0]?.cycle_days)||30};
-      const ai=new GoogleGenAI({apiKey:process.env.GEMINI_API_KEY});const response=await ai.models.generateContent({model:MODEL,contents:`DADOS DO ALUNO E PLANO ATUAL:\n${JSON.stringify(context,null,2)}\n\nCrie uma sugestão de próximo ciclo. Preserve a quantidade de dias compatível com a disponibilidade do aluno. Para dias de musculação, inclua exercícios, séries, faixa de repetições e descanso. Para corrida, inclua duração, pace/intensidade quando houver base suficiente.`,config:{systemInstruction:planInstruction(),responseMimeType:'application/json',responseSchema:planSchema}});
+      const ai=new GoogleGenAI({apiKey:process.env.GEMINI_API_KEY});const response=await ai.models.generateContent({model:MODEL,contents:`DADOS DO ALUNO E PLANO ATUAL:\n${JSON.stringify(context,null,2)}\n\nCrie uma sugestão de próximo ciclo. Preserve a quantidade de dias compatível com a disponibilidade do aluno. Para dias de musculação, inclua exercícios, séries, faixa de repetições e descanso. Para corrida, inclua duração, pace/intensidade quando houver base suficiente.`,config:{systemInstruction:planInstruction(),responseMimeType:'application/json',responseSchema:planSchema,maxOutputTokens:2600,temperature:0.3}});
       let data;try{data=JSON.parse(response.text)}catch{return sendError(res,502,'AION retornou uma sugestão inválida. Tente novamente.','invalid_ai_output')}
       if(!Array.isArray(data.plan)||!data.plan.length)return sendError(res,502,'AION não conseguiu montar o plano agora.','empty_ai_plan');
       await audit(sql,user.id,athleteId,'aion_plan_suggested',{days:data.plan.length,model:MODEL});return res.status(200).json({ok:true,...data});
     }
     return sendError(res,404,'Rota não encontrada.','not_found');
-  }catch(error){console.error('Vaz Personal ops error',action,error);const msg=String(error?.message||'');if(msg.includes('relation')||msg.includes('column'))return sendError(res,503,'A estrutura de ciclos e mensalidades ainda precisa ser ativada no banco.','migration_required');return sendError(res,500,'Não foi possível concluir esta operação agora.','server_error')}
+  }catch(error){
+    console.error('Vaz Personal ops error',action,error);const msg=String(error?.message||'');const status=Number(error?.status||error?.statusCode||0);
+    if(status===429||/RESOURCE_EXHAUSTED|rate.?limit|quota/i.test(msg)){res.setHeader('Retry-After','60');return sendError(res,429,'A AION está temporariamente no limite. Tente novamente em instantes.','aion_provider_rate_limited')}
+    if(msg.includes('relation')||msg.includes('column'))return sendError(res,503,'A estrutura de ciclos e mensalidades ainda precisa ser ativada no banco.','migration_required');return sendError(res,500,'Não foi possível concluir esta operação agora.','server_error')}
 }
