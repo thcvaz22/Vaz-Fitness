@@ -11,10 +11,10 @@ const copies=[
   ['personal/app-v2.css',`${out}/app-v2.css`],
   ['personal/training-library-v2.js',`${out}/training-library-v2.js`],
   ['personal/training-library-v2.css',`${out}/training-library-v2.css`],
-  ['personal/manifest.webmanifest',`${out}/manifest.webmanifest`]
+  ['personal/manifest.webmanifest',`${out}/manifest.webmanifest`],
+  ['personal/icon.svg',`${out}/icon.svg`]
 ];
 for(const [src,dst] of copies){if(!existsSync(src))throw new Error(`Arquivo ausente: ${src}`);await copyFile(src,dst)}
-if(existsSync('icon.svg'))await copyFile('icon.svg',`${out}/icon.svg`);
 
 let html=await readFile(`${out}/index.html`,'utf8');
 html=html.replace('<script src="./app-v2.js"></script>',`<script>window.VAZ_PERSONAL_NATIVE=true;window.VAZ_API_BASE='https://vaz-fitness.vercel.app';</script>\n  <script src="./app-v2.js"></script>`);
