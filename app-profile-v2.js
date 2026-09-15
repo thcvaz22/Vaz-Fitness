@@ -3,6 +3,8 @@
   const form=document.getElementById('onboardingForm');
   if(!form||document.querySelector('[data-step="5"]'))return;
 
+  if(!state.onboarded&&state.profile.name==='Thiago')state.profile.name='';
+
   const original2=document.querySelector('[data-step="2"]');
   const original3=document.querySelector('[data-step="3"]');
   const original4=document.querySelector('[data-step="4"]');
@@ -16,7 +18,10 @@
   physical.innerHTML=`
     <h2>Conte um pouco sobre você</h2>
     <p class="step-helper">Esses dados ajudam a AION a calibrar volume, impacto, recuperação e progressão. A preferência muscular continua sendo definida por você.</p>
-    <div class="field-row">
+    <label>Nome
+      <input name="name" type="text" maxlength="40" value="${escapeHtml(state.profile.name||'')}" placeholder="Como quer ser chamado?" required>
+    </label>
+    <div class="field-row" style="margin-top:14px">
       <label>Idade
         <input name="age" type="number" inputmode="numeric" min="13" max="100" value="${state.profile.age||''}" placeholder="Ex.: 34" required>
       </label>
@@ -65,10 +70,12 @@
   form.onsubmit=e=>{
     e.preventDefault();
     const fd=new FormData(e.currentTarget);
+    const name=String(fd.get('name')||'').trim().slice(0,40);
     const age=Number(fd.get('age')),weight=Number(fd.get('weight')),height=Number(fd.get('height'));
+    if(!name){toast('Informe seu nome.');return;}
     if(!Number.isFinite(age)||age<13||age>100||!Number.isFinite(weight)||weight<30||weight>350||!Number.isFinite(height)||height<120||height>230){toast('Revise idade, peso e altura.');return;}
     state.profile={...state.profile,
-      age,weight,height,sex:fd.get('sex')||'prefer_not',profileVersion:2,
+      name,age,weight,height,sex:fd.get('sex')||'prefer_not',profileVersion:2,
       mode:fd.get('mode'),goal:fd.get('goal'),level:fd.get('level'),priorityMuscle:fd.get('priorityMuscle'),
       days:+fd.get('days'),minutes:+fd.get('minutes'),location:fd.get('location'),runLevel:fd.get('runLevel'),easyPace:fd.get('easyPace')||'5:30'
     };
