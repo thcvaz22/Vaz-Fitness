@@ -1,0 +1,11 @@
+{
+  "name":"Vaz Personal",
+  "short_name":"Vaz Personal",
+  "start_url":"/personal/",
+  "scope":"/personal/",
+  "display":"standalone",
+  "background_color":"#f6f6f3",
+  "theme_color":"#f5c400",
+  "description":"Central de gestão de alunos conectada ao Vaz Fitness",
+  "icons":[{"src":"/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
