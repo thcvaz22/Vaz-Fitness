@@ -7,12 +7,14 @@ on:
     paths:
       - 'personal/**'
       - 'api/personal-ops.js'
+      - 'api/personal-tools.js'
       - 'api/personal-auth.js'
       - 'api/health.js'
       - 'api/vf.js'
       - 'api/branding.js'
       - 'lib/admin-handler.js'
       - 'lib/training-library-handler.js'
+      - 'lib/exercise-catalog-v4.js'
       - 'lib/cors.js'
       - 'capacitor.personal.config.json'
       - 'scripts/build-personal-native-v2.mjs'
@@ -35,12 +37,12 @@ jobs:
           java-version: '21'
       - name: Install dependencies
         run: npm install
-      - name: Validate Vaz Personal 2.0 JavaScript
-        run: node --check personal/app-v2.js && node --check personal/training-library-v2.js && node --check api/personal-auth.js && node --check api/health.js && node --check api/personal-ops.js && node --check lib/admin-handler.js && node --check lib/training-library-handler.js
-      - name: Prepare Vaz Personal 2.0 bundle
+      - name: Validate Vaz Personal JavaScript
+        run: node --check personal/app-v2.js && node --check personal/training-library-v2.js && node --check personal/coach-tools-v4.js && node --check api/personal-auth.js && node --check api/health.js && node --check api/personal-ops.js && node --check api/personal-tools.js && node --check lib/admin-handler.js && node --check lib/training-library-handler.js && node --check lib/exercise-catalog-v4.js
+      - name: Prepare Vaz Personal native bundle
         run: node scripts/build-personal-native-v2.mjs
       - name: Validate native bundle
-        run: node --check www-personal/app-v2.js && node --check www-personal/training-library-v2.js
+        run: node --check www-personal/app-v2.js && node --check www-personal/training-library-v2.js && node --check www-personal/coach-tools-v4.js
       - name: Use Vaz Personal Capacitor config
         run: cp capacitor.personal.config.json capacitor.config.json
       - name: Create Android project
@@ -55,6 +57,6 @@ jobs:
       - name: Upload Vaz Personal APK
         uses: actions/upload-artifact@v4
         with:
-          name: Vaz-Personal-Android-v4-Debug
+          name: Vaz-Personal-Android-v5-Debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
