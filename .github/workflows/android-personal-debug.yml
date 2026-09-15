@@ -1,0 +1,47 @@
+name: Vaz Personal Android Debug APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'personal/**'
+      - 'api/personal-ops.js'
+      - 'api/vf.js'
+      - 'api/branding.js'
+      - 'capacitor.personal.config.json'
+      - 'scripts/build-personal-native.mjs'
+      - 'package.json'
+      - '.github/workflows/android-personal-debug.yml'
+
+jobs:
+  build-personal-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install dependencies
+        run: npm install
+      - name: Prepare Vaz Personal web bundle
+        run: node scripts/build-personal-native.mjs
+      - name: Use Vaz Personal Capacitor config
+        run: cp capacitor.personal.config.json capacitor.config.json
+      - name: Create Android project
+        run: npx cap add android
+      - name: Sync Capacitor
+        run: npx cap sync android
+      - name: Build debug APK
+        working-directory: android
+        run: chmod +x gradlew && ./gradlew assembleDebug
+      - name: Upload Vaz Personal APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Vaz-Personal-Android-Debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
