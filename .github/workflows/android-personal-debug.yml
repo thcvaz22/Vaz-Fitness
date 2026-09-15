@@ -7,10 +7,12 @@ on:
     paths:
       - 'personal/**'
       - 'api/personal-ops.js'
+      - 'api/personal-auth.js'
+      - 'api/admin-v2.js'
       - 'api/vf.js'
       - 'api/branding.js'
       - 'capacitor.personal.config.json'
-      - 'scripts/build-personal-native.mjs'
+      - 'scripts/build-personal-native-v2.mjs'
       - 'package.json'
       - '.github/workflows/android-personal-debug.yml'
 
@@ -28,12 +30,12 @@ jobs:
           java-version: '21'
       - name: Install dependencies
         run: npm install
-      - name: Validate server and add-ons
-        run: node --check personal/branding.js && node --check personal/management-v2.js && node --check api/personal-ops.js
-      - name: Prepare Vaz Personal web bundle
-        run: node scripts/build-personal-native.mjs
-      - name: Validate repaired native app
-        run: node --check www-personal/app.js
+      - name: Validate Vaz Personal 2.0 JavaScript
+        run: node --check personal/app-v2.js && node --check api/personal-auth.js && node --check api/admin-v2.js && node --check api/personal-ops.js
+      - name: Prepare Vaz Personal 2.0 bundle
+        run: node scripts/build-personal-native-v2.mjs
+      - name: Validate native bundle
+        run: node --check www-personal/app-v2.js
       - name: Use Vaz Personal Capacitor config
         run: cp capacitor.personal.config.json capacitor.config.json
       - name: Create Android project
@@ -46,6 +48,6 @@ jobs:
       - name: Upload Vaz Personal APK
         uses: actions/upload-artifact@v4
         with:
-          name: Vaz-Personal-Android-Debug
+          name: Vaz-Personal-Android-v2-Debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
