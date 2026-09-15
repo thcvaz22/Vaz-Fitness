@@ -1,4 +1,4 @@
-import { getConnection, refreshConnection, validInstallationId } from './strava-lib.js';
+import { getConnection, refreshConnection, validInstallationId } from '../lib/strava-lib.js';
 import { applyCors } from './cors.js';
 
 const STRAVA_API='https://www.strava.com/api/v3';
