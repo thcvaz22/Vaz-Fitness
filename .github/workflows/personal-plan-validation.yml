@@ -18,10 +18,14 @@ jobs:
           node --check lib/personal-plan-handler.js
           node --check api/health.js
           node --check personal/plans-v5.js
+          node --check personal/plan-pricing-v6.js
       - name: Build Vaz Personal native bundle
         run: node scripts/build-personal-native-v2.mjs
-      - name: Validate packaged plan module
+      - name: Validate packaged plan modules
         run: |
           test -f www-personal/plans-v5.js
+          test -f www-personal/plan-pricing-v6.js
           node --check www-personal/plans-v5.js
+          node --check www-personal/plan-pricing-v6.js
           grep -q "plans-v5.js" www-personal/index.html
+          grep -q "plan-pricing-v6.js" www-personal/index.html
