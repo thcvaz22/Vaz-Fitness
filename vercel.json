@@ -5,6 +5,10 @@
       "maxDuration": 30
     }
   },
+  "rewrites": [
+    { "source": "/api/admin-v2", "destination": "/api/health?scope=admin" },
+    { "source": "/api/training-library", "destination": "/api/health?scope=library" }
+  ],
   "headers": [
     {
       "source": "/sw.js",
