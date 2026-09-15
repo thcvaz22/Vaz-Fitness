@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { neon } from '@neondatabase/serverless';
 import { applyCors } from './cors.js';
+import { makeState, requireStravaConfig, validInstallationId } from '../lib/strava-lib.js';
 
 const SESSION_DAYS=30;
 const CODE_ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -36,6 +37,7 @@ async function uniquePublicCode(sql,role){
   throw new Error('Não foi possível gerar um código único.');
 }
 async function issueSession(sql,userId){
+  await sql`DELETE FROM vf_sessions WHERE expires_at<now()`;
   const token=crypto.randomBytes(32).toString('base64url');
   const hash=tokenHash(token);
   const expiresAt=new Date(Date.now()+SESSION_DAYS*86400000).toISOString();
@@ -47,11 +49,12 @@ async function authenticate(req,role=null){
   const token=header.startsWith('Bearer ')?header.slice(7).trim():'';
   if(!token)return null;
   const sql=db();
-  const rows=await sql`SELECT u.id,u.public_code,u.role,u.email,u.name,s.token_hash
+  const rows=await sql`SELECT u.id,u.public_code,u.role,u.email,u.name,u.account_status,s.token_hash
     FROM vf_sessions s JOIN vf_users u ON u.id=s.user_id
     WHERE s.token_hash=${tokenHash(token)} AND s.expires_at>now() LIMIT 1`;
   const user=rows[0]||null;
   if(!user||role&&user.role!==role)return null;
+  if(['personal','admin'].includes(user.role)&&user.account_status!=='approved')return null;
   return {sql,user,tokenHash:user.token_hash};
 }
 async function getAthleteAccess(sql,athleteId){
@@ -70,50 +73,40 @@ async function linkedClient(sql,personalId,athleteId){
 async function audit(sql,actorId,athleteId,action,payload={}){
   try{await sql`INSERT INTO vf_audit_log (actor_id,athlete_id,action,payload) VALUES (${actorId||null},${athleteId||null},${action},CAST(${JSON.stringify(payload)} AS jsonb))`;}catch{}
 }
-function stateSummary(state={}){
-  const profile=state.profile||{};
-  const sessions=Array.isArray(state.sessions)?state.sessions:[];
-  const runs=Array.isArray(state.runSessions)?state.runSessions:[];
-  const body=Array.isArray(state.bodyMeasurements)?state.bodyMeasurements:[];
-  const latest=[...sessions,...runs].map(x=>x?.date).filter(Boolean).sort().at(-1)||null;
-  return {
-    mode:profile.mode||null,goal:profile.goal||null,age:profile.age||null,weight:body.at(-1)?.weight||profile.weight||null,
-    weeklyDays:profile.days||null,strengthSessions:sessions.length,runSessions:runs.length,lastActivity:latest,
-    recentRuns:runs.slice(-5).map(r=>({date:r.date,name:r.name,distance:r.distance,pace:r.pace,duration:r.duration,effort:r.effort})),
-    recentStrength:sessions.slice(-5).map(s=>({date:s.date,name:s.name,duration:s.duration,volume:s.volume,completionPercent:s.completionPercent}))
-  };
-}
 function sendError(res,status,message,code='error'){return res.status(status).json({ok:false,error:code,message});}
 
 export default async function handler(req,res){
   if(applyCors(req,res))return;
+  res.setHeader('Cache-Control','no-store');
   const action=String(req.query?.action||req.body?.action||'').trim();
   const method=String(req.method||'GET').toUpperCase();
   try{
     if(action==='register'&&method==='POST'){
+      if(req.body?.role==='personal')return sendError(res,403,'Cadastros de personal devem ser feitos pelo Vaz Personal.','personal_registration_route');
       const sql=db();
-      const role=req.body?.role==='personal'?'personal':'athlete';
+      const role='athlete';
       const email=normalizeEmail(req.body?.email),name=cleanText(req.body?.name,80),password=String(req.body?.password||'');
       if(!name||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||password.length<8||password.length>200)return sendError(res,400,'Revise nome, e-mail e senha. A senha deve ter pelo menos 8 caracteres.','invalid_registration');
       const exists=await sql`SELECT 1 FROM vf_users WHERE email=${email} LIMIT 1`;
       if(exists.length)return sendError(res,409,'Já existe uma conta com este e-mail.','email_exists');
-      const id=`${role==='personal'?'per':'ath'}_${crypto.randomUUID()}`;
+      const id=`ath_${crypto.randomUUID()}`;
       const publicCode=await uniquePublicCode(sql,role),salt=crypto.randomBytes(16).toString('hex'),hash=passwordHash(password,salt);
-      await sql`INSERT INTO vf_users (id,public_code,role,email,name,password_salt,password_hash) VALUES (${id},${publicCode},${role},${email},${name},${salt},${hash})`;
+      await sql`INSERT INTO vf_users (id,public_code,role,email,name,password_salt,password_hash,account_status) VALUES (${id},${publicCode},${role},${email},${name},${salt},${hash},'approved')`;
       await sql`INSERT INTO vf_cloud_state (user_id,state) VALUES (${id},'{}'::jsonb) ON CONFLICT (user_id) DO NOTHING`;
-      if(role==='athlete')await sql`INSERT INTO vf_athlete_access (athlete_id,status) VALUES (${id},'pending') ON CONFLICT (athlete_id) DO NOTHING`;
+      await sql`INSERT INTO vf_athlete_access (athlete_id,status) VALUES (${id},'pending') ON CONFLICT (athlete_id) DO NOTHING`;
       const token=await issueSession(sql,id);
-      await audit(sql,id,role==='athlete'?id:null,'account_created',{role});
+      await audit(sql,id,id,'account_created',{role});
       return res.status(201).json({ok:true,token,user:{id,publicCode,role,email,name}});
     }
 
     if(action==='login'&&method==='POST'){
       const sql=db(),email=normalizeEmail(req.body?.email),password=String(req.body?.password||'');
-      const rows=await sql`SELECT id,public_code,role,email,name,password_salt,password_hash FROM vf_users WHERE email=${email} LIMIT 1`;
+      const rows=await sql`SELECT id,public_code,role,email,name,password_salt,password_hash,account_status FROM vf_users WHERE email=${email} LIMIT 1`;
       const row=rows[0];
       if(!row){passwordHash(password,'00000000000000000000000000000000');return sendError(res,401,'E-mail ou senha inválidos.','invalid_credentials');}
       const actual=Buffer.from(passwordHash(password,row.password_salt),'hex'),expected=Buffer.from(row.password_hash,'hex');
       if(actual.length!==expected.length||!crypto.timingSafeEqual(actual,expected))return sendError(res,401,'E-mail ou senha inválidos.','invalid_credentials');
+      if(['personal','admin'].includes(row.role)&&row.account_status!=='approved')return sendError(res,423,'Seu acesso não está disponível.','account_blocked');
       const token=await issueSession(sql,row.id);
       const access=row.role==='athlete'?await getAthleteAccess(sql,row.id):null;
       return res.status(200).json({ok:true,token,user:publicUser(row),access});
@@ -129,6 +122,20 @@ export default async function handler(req,res){
       const auth=await authenticate(req);if(!auth)return sendError(res,401,'Sessão inválida.','unauthorized');
       const access=auth.user.role==='athlete'?await getAthleteAccess(auth.sql,auth.user.id):null;
       return res.status(200).json({ok:true,user:publicUser(auth.user),access});
+    }
+
+    if(action==='strava_oauth_url'&&method==='GET'){
+      const auth=await authenticate(req,'athlete');if(!auth)return sendError(res,401,'Sessão inválida.','unauthorized');
+      const access=await getAthleteAccess(auth.sql,auth.user.id);if(access?.status!=='approved')return sendError(res,423,'Seu acesso precisa estar liberado antes de conectar o Strava.','athlete_not_approved');
+      const installationId=String(req.query?.installationId||'');if(!validInstallationId(installationId))return sendError(res,400,'installationId inválido.','invalid_installation');
+      requireStravaConfig();
+      const host=req.headers['x-forwarded-host']||req.headers.host,proto=req.headers['x-forwarded-proto']||'https';
+      const redirectUri=`${proto}://${host}/api/strava-callback`,native=String(req.query?.native||'')==='1';
+      const returnTo=native?'vazfitness://strava-connected':'/?strava=connected';
+      const oauthState=makeState(installationId,returnTo,auth.user.id);
+      const target=new URL(native?'https://www.strava.com/oauth/mobile/authorize':'https://www.strava.com/oauth/authorize');
+      target.searchParams.set('client_id',String(process.env.STRAVA_CLIENT_ID));target.searchParams.set('redirect_uri',redirectUri);target.searchParams.set('response_type','code');target.searchParams.set('approval_prompt','auto');target.searchParams.set('scope','activity:read,activity:write');target.searchParams.set('state',oauthState);
+      return res.status(200).json({ok:true,url:target.toString()});
     }
 
     if(action==='submit_profile'&&method==='POST'){
@@ -175,11 +182,15 @@ export default async function handler(req,res){
 
     if(action==='personal_clients'&&method==='GET'){
       const auth=await authenticate(req,'personal');if(!auth)return sendError(res,401,'Sessão inválida.','unauthorized');
-      const rows=await auth.sql`SELECT u.id,u.name,u.email,u.public_code,a.status,a.profile_submitted_at,a.approved_at,a.updated_at,c.state,p.plan_version,p.updated_at AS plan_updated_at
+      const rows=await auth.sql`SELECT u.id,u.name,u.email,u.public_code,a.status,a.profile_submitted_at,a.approved_at,a.updated_at,p.plan_version,p.updated_at AS plan_updated_at,
+        c.state #>> '{profile,mode}' AS mode,c.state #>> '{profile,goal}' AS goal,c.state #>> '{profile,age}' AS age,c.state #>> '{profile,days}' AS weekly_days,
+        COALESCE(c.state #>> '{bodyMeasurements,-1,weight}',c.state #>> '{profile,weight}') AS weight,
+        CASE WHEN jsonb_typeof(c.state->'sessions')='array' THEN jsonb_array_length(c.state->'sessions') ELSE 0 END AS strength_sessions,
+        CASE WHEN jsonb_typeof(c.state->'runSessions')='array' THEN jsonb_array_length(c.state->'runSessions') ELSE 0 END AS run_sessions
         FROM vf_athlete_access a JOIN vf_users u ON u.id=a.athlete_id
         LEFT JOIN vf_cloud_state c ON c.user_id=u.id LEFT JOIN vf_training_plans p ON p.athlete_id=u.id
         WHERE a.personal_id=${auth.user.id} ORDER BY a.updated_at DESC`;
-      const clients=rows.map(r=>({id:r.id,name:r.name,email:r.email,publicCode:r.public_code,status:r.status,profileSubmittedAt:r.profile_submitted_at,approvedAt:r.approved_at,planVersion:r.plan_version||0,summary:stateSummary(r.state||{})}));
+      const clients=rows.map(r=>({id:r.id,name:r.name,email:r.email,publicCode:r.public_code,status:r.status,profileSubmittedAt:r.profile_submitted_at,approvedAt:r.approved_at,planVersion:Number(r.plan_version)||0,summary:{mode:r.mode||null,goal:r.goal||null,age:r.age?Number(r.age):null,weight:r.weight?Number(r.weight):null,weeklyDays:r.weekly_days?Number(r.weekly_days):null,strengthSessions:Number(r.strength_sessions)||0,runSessions:Number(r.run_sessions)||0,lastActivity:null,recentRuns:[],recentStrength:[]}}));
       return res.status(200).json({ok:true,clients});
     }
 
