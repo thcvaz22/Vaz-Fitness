@@ -1,8 +1,11 @@
 // Vaz Personal v4 — catálogo AION, filtros avançados de alunos e academia.
 (()=>{
-  let athleteMeta={};
-  let exerciseCatalog=[];
-  let catalogVersion=0;
+  const GYM_CACHE='vazPersonal.gymMeta.v4';
+  const readGymCache=()=>{try{return JSON.parse(localStorage.getItem(GYM_CACHE)||'{}')||{}}catch{return {}}};
+  const writeGymCache=()=>{try{localStorage.setItem(GYM_CACHE,JSON.stringify(athleteMeta))}catch{}};
+  let athleteMeta=readGymCache();
+  let exerciseCatalog=Array.isArray(window.VAZ_EXERCISE_CATALOG_V4)?window.VAZ_EXERCISE_CATALOG_V4.map(x=>({...x,source:x.source||'builtin'})):[];
+  let catalogVersion=Number(window.VAZ_EXERCISE_CATALOG_VERSION)||4;
   let toolsLoading=false;
 
   const toolsApi=(action,o={})=>req('/api/personal-tools',{...o,params:{...(o.params||{}),action}});
@@ -17,7 +20,13 @@
     clients=(clients||[]).map(c=>({...c,gymName:athleteMeta[c.id]?.gymName||c.gymName||''}));
   }
   async function loadMeta(){
-    try{const d=await toolsApi('meta_summary');athleteMeta=d.meta||{};applyMeta()}catch(e){console.warn('Meta de alunos indisponível',e)}
+    const local=readGymCache();athleteMeta={...local,...athleteMeta};applyMeta();
+    try{
+      const d=await toolsApi('meta_summary'),remote=d.meta||{};
+      athleteMeta={...local,...remote};writeGymCache();applyMeta();
+      const pending=Object.entries(local).filter(([id,m])=>m?.gymName&&!remote[id]);
+      if(pending.length)Promise.allSettled(pending.map(([athleteId,m])=>toolsApi('set_gym',{method:'POST',body:{athleteId,gymName:m.gymName}}))).then(()=>{});
+    }catch(e){console.warn('Meta de alunos em modo local',e)}
   }
   async function loadCatalog(){
     if(toolsLoading)return;toolsLoading=true;
@@ -26,13 +35,17 @@
       catalogVersion=Number(d.version)||0;
       const seen=new Set();
       exerciseCatalog=[...(d.custom||[]),...(d.builtin||[])].filter(x=>x?.id&&x?.name&&!seen.has(x.id)&&(seen.add(x.id),true));
-    }catch(e){console.warn('Catálogo AION indisponível',e)}finally{toolsLoading=false}
+    }catch(e){
+      if(!exerciseCatalog.length&&Array.isArray(window.VAZ_EXERCISE_CATALOG_V4))exerciseCatalog=window.VAZ_EXERCISE_CATALOG_V4.map(x=>({...x,source:x.source||'builtin'}));
+      console.warn('Catálogo AION usando base embarcada',e);
+    }finally{toolsLoading=false}
   }
   async function saveGym(athleteId,gymName,{quiet=false}={}){
-    const d=await toolsApi('set_gym',{method:'POST',body:{athleteId,gymName:String(gymName||'').trim()}});
-    athleteMeta[athleteId]={...(athleteMeta[athleteId]||{}),gymName:d.gymName||''};applyMeta();
-    if(selected?.athlete?.id===athleteId)selected.athlete.gymName=d.gymName||'';
-    if(!quiet)toast(d.gymName?'Academia atualizada.':'Academia removida.');
+    const value=String(gymName||'').trim();let d={ok:true,gymName:value,localOnly:true};
+    try{d=await toolsApi('set_gym',{method:'POST',body:{athleteId,gymName:value}})}catch(e){console.warn('Academia aguardando sincronização',e)}
+    athleteMeta[athleteId]={...(athleteMeta[athleteId]||{}),gymName:d.gymName??value,pendingSync:!!d.localOnly};writeGymCache();applyMeta();
+    if(selected?.athlete?.id===athleteId)selected.athlete.gymName=d.gymName??value;
+    if(!quiet)toast(d.localOnly?'Academia salva • sincronização pendente.':(d.gymName?'Academia atualizada.':'Academia removida.'));
     return d;
   }
 
@@ -117,8 +130,10 @@
       e.preventDefault();const fd=new FormData(e.target);const code=String(fd.get('code')||'').toUpperCase().trim(),gym=String(fd.get('gym')||'').trim();
       try{
         const d=await vfApi('personal_claim',{method:'POST',body:{code}});
-        if(gym&&d.athlete?.id)await saveGym(d.athlete.id,gym,{quiet:true});
-        await loadPersonal();m.remove();toast(gym?'Aluno vinculado e academia cadastrada.':'Aluno vinculado.');render();
+        await loadPersonal();
+        const athleteId=d.athlete?.id||(clients||[]).find(c=>String(c.publicCode||'').toUpperCase()===code)?.id;
+        if(gym&&athleteId)await saveGym(athleteId,gym,{quiet:true});
+        m.remove();toast(gym?'Aluno vinculado e academia cadastrada.':'Aluno vinculado.');render();
       }catch(err){toast(err.message)}
     };
   }
@@ -183,8 +198,10 @@
   suggestPlan=async function(){
     try{
       toast('AION está montando o próximo ciclo com a biblioteca completa…');
-      const d=await toolsApi('suggest_plan',{method:'POST',body:{athleteId:selected.athlete.id}});
-      selected.plan={...(selected.plan||{}),plan:d.plan};aiDraft=true;clientTab='plan';render();toast(`Rascunho AION pronto • catálogo v${d.catalogVersion||catalogVersion||4}.`);
+      let d;
+      try{d=await toolsApi('suggest_plan',{method:'POST',body:{athleteId:selected.athlete.id}})}
+      catch{d=await opsApi('suggest_plan',{method:'POST',body:{athleteId:selected.athlete.id}})}
+      selected.plan={...(selected.plan||{}),plan:d.plan};aiDraft=true;clientTab='plan';render();toast(d.catalogVersion?`Rascunho AION pronto • catálogo v${d.catalogVersion}.`:'Rascunho AION pronto.');
     }catch(e){toast(e.message)}
   };
 
