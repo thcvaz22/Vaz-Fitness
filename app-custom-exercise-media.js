@@ -1,0 +1,15 @@
+(()=>{
+  if(typeof showExerciseMedia!=='function')return;
+  const originalShowExerciseMedia=showExerciseMedia;
+  const esc=typeof escapeHtml==='function'?escapeHtml:(v='')=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+  function youtubeEmbed(url){try{const u=new URL(url);if(u.hostname.includes('youtu.be'))return `https://www.youtube.com/embed/${u.pathname.replace('/','').split('?')[0]}`;if(u.hostname.includes('youtube.com')){const id=u.searchParams.get('v');if(id)return `https://www.youtube.com/embed/${id}`;const m=u.pathname.match(/\/shorts\/([^/?]+)/);if(m)return `https://www.youtube.com/embed/${m[1]}`}}catch{}return null}
+  function vimeoEmbed(url){try{const u=new URL(url);if(!u.hostname.includes('vimeo.com'))return null;const id=u.pathname.split('/').filter(Boolean).at(-1);return /^\d+$/.test(id||'')?`https://player.vimeo.com/video/${id}`:null}catch{return null}}
+  function mediaHtml(url,name){if(!url)return '';const yt=youtubeEmbed(url),vm=vimeoEmbed(url);if(yt||vm)return `<div style="position:relative;padding-top:56.25%;border-radius:18px;overflow:hidden;background:#111"><iframe src="${esc(yt||vm)}" title="Vídeo de ${esc(name)}" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;border:0"></iframe></div>`;if(/\.(mp4|webm|ogg)(\?|$)/i.test(url))return `<video controls playsinline style="width:100%;border-radius:18px;background:#111" src="${esc(url)}"></video>`;return `<a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener noreferrer">▶ Abrir vídeo do personal</a>`}
+  showExerciseMedia=async function(ex){
+    if(!ex?.videoUrl&&!ex?.instructions)return originalShowExerciseMedia(ex);
+    const dialog=document.getElementById('mediaDialog'),content=document.getElementById('mediaContent');if(!dialog||!content)return originalShowExerciseMedia(ex);
+    const instructions=String(ex.instructions||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
+    content.innerHTML=`<div class="media-sheet"><div class="media-head"><div><span class="eyebrow">INSTRUÇÃO DO SEU PERSONAL</span><h2>${esc(ex.name||'Exercício')}</h2><p>${ex.equipment?`Equipamento: ${esc(ex.equipment)}`:'Orientações personalizadas para este exercício.'}</p></div><button class="media-close" data-close-media>✕</button></div>${mediaHtml(ex.videoUrl,ex.name||'Exercício')}<div class="media-info-grid" style="margin-top:14px"><div><h3>Como executar</h3>${instructions.length?`<ol>${instructions.map(i=>`<li>${esc(i)}</li>`).join('')}</ol>`:'<p>Siga a orientação do seu personal e mantenha a execução controlada.</p>'}</div><div><h3>Pontos de atenção</h3><ul><li>Interrompa se houver dor fora do esforço esperado.</li><li>Priorize a técnica antes de aumentar a carga.</li></ul></div></div><div class="media-actions"><button class="btn primary" data-close-media>Voltar ao treino</button></div></div>`;
+    dialog.showModal();content.querySelectorAll('[data-close-media]').forEach(b=>b.onclick=()=>dialog.close());
+  };
+})();
