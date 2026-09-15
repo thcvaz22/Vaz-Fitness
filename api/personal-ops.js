@@ -131,7 +131,8 @@ export default async function handler(req,res){
     }
     return sendError(res,404,'Rota não encontrada.','not_found');
   }catch(error){
-    console.error('Vaz Personal ops error',action,error);const msg=String(error?.message||'');const status=Number(error?.status||error?.statusCode||0);
+    const status=Number(error?.status||error?.statusCode||0),code=String(error?.code||error?.name||'provider_error').slice(0,80),msg=String(error?.message||'');
+    console.error('Vaz Personal ops error',{action,status:status||null,code});
     if(status===429||/RESOURCE_EXHAUSTED|rate.?limit|quota/i.test(msg)){res.setHeader('Retry-After','60');return sendError(res,429,'A AION está temporariamente no limite. Tente novamente em instantes.','aion_provider_rate_limited')}
     if(msg.includes('relation')||msg.includes('column'))return sendError(res,503,'A estrutura de ciclos e mensalidades ainda precisa ser ativada no banco.','migration_required');return sendError(res,500,'Não foi possível concluir esta operação agora.','server_error')}
 }
