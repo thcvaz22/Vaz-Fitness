@@ -28,10 +28,12 @@ jobs:
           java-version: '21'
       - name: Install dependencies
         run: npm install
-      - name: Validate JavaScript
-        run: node --check personal/app.js && node --check personal/branding.js && node --check personal/management-v2.js && node --check api/personal-ops.js
+      - name: Validate server and add-ons
+        run: node --check personal/branding.js && node --check personal/management-v2.js && node --check api/personal-ops.js
       - name: Prepare Vaz Personal web bundle
         run: node scripts/build-personal-native.mjs
+      - name: Validate repaired native app
+        run: node --check www-personal/app.js
       - name: Use Vaz Personal Capacitor config
         run: cp capacitor.personal.config.json capacitor.config.json
       - name: Create Android project
