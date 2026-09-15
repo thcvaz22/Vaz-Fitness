@@ -3,6 +3,7 @@ import { neon } from '@neondatabase/serverless';
 
 const STRAVA_API='https://www.strava.com/api/v3';
 const STRAVA_OAUTH='https://www.strava.com/oauth';
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 function sql(){
   if(!process.env.DATABASE_URL) throw new Error('DATABASE_URL não configurada.');
@@ -77,6 +78,18 @@ export function makeGpx(session){
   const trk=points.map((p,i)=>`<trkpt lat="${Number(p.lat).toFixed(6)}" lon="${Number(p.lng).toFixed(6)}"><time>${routeTime(p,i,session)}</time></trkpt>`).join('');
   return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Vaz Fitness" xmlns="http://www.topografix.com/GPX/1/1"><metadata><name>${escXml(session.name||'Corrida Vaz Fitness')}</name></metadata><trk><name>${escXml(session.name||'Corrida Vaz Fitness')}</name><type>running</type><trkseg>${trk}</trkseg></trk></gpx>`;
 }
+async function waitForUpload(uploadId,headers){
+  let last=null;
+  for(let i=0;i<10;i++){
+    if(i)await sleep(1000);
+    const r=await fetch(`${STRAVA_API}/uploads/${encodeURIComponent(uploadId)}`,{headers});
+    if(!r.ok)continue;
+    last=await r.json().catch(()=>null);
+    if(last?.error)throw new Error(`Strava: ${String(last.error).replace(/<[^>]*>/g,'')}`);
+    if(last?.activity_id)return last;
+  }
+  return last;
+}
 export async function uploadRun(conn,session){
   conn=await refreshConnection(conn);
   const headers={Authorization:`Bearer ${conn.access_token}`};
@@ -91,8 +104,15 @@ export async function uploadRun(conn,session){
     form.append('external_id',`vaz-fitness-${session.id||Date.now()}`);
     const r=await fetch(`${STRAVA_API}/uploads`,{method:'POST',headers,body:form});
     const data=await r.json().catch(()=>({}));
-    if(!r.ok)throw new Error(data.message||data.error||`Falha no upload Strava (${r.status}).`);
-    return {mode:'gpx',...data};
+    if(!r.ok){
+      const detail=String(data.message||data.error||'');
+      if(/duplicate/i.test(detail))return {mode:'gpx',duplicate:true,status:detail};
+      throw new Error(detail||`Falha no upload Strava (${r.status}).`);
+    }
+    const uploadId=data.id_str||data.id;
+    if(!uploadId)return {mode:'gpx',accepted:true,...data};
+    const processed=await waitForUpload(String(uploadId),headers);
+    return {mode:'gpx',accepted:true,upload_id:String(uploadId),activity_id:processed?.activity_id||data.activity_id||null,status:processed?.status||data.status||'Enviado ao Strava'};
   }
   const start=new Date(session.startedAt||session.date||Date.now()).toISOString();
   const body=new URLSearchParams({name:session.name||'Corrida Vaz Fitness',sport_type:'Run',type:'Run',start_date_local:start,elapsed_time:String(Math.max(1,Number(session.durationSec)||60)),distance:String(Math.max(0,Number(session.distance)||0)*1000),description:`Treino registrado pelo Vaz Fitness • esforço ${session.effort||'não informado'}`});
