@@ -1,0 +1,12 @@
+{
+  "name":"Vaz Fitness",
+  "short_name":"Vaz Fitness",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#ffffff",
+  "theme_color":"#f5c400",
+  "description":"Treino adaptativo com AION IA",
+  "icons":[
+    {"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
