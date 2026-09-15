@@ -6,8 +6,13 @@ window.VazNative=window.VazNative||{};
 window.VazNative.isNative=true;
 window.VazNative.openExternal=async url=>Browser.open({url});
 window.VazNative.openStravaAuth=async installationId=>{
-  const url=`${window.VAZ_API_BASE}/api/strava-auth?installationId=${encodeURIComponent(installationId)}&native=1`;
-  await Browser.open({url});
+  const token=localStorage.getItem('vazFitness.authToken')||'';
+  if(!token)throw new Error('Entre na sua conta antes de conectar o Strava.');
+  const endpoint=`${window.VAZ_API_BASE}/api/vf?action=strava_oauth_url&installationId=${encodeURIComponent(installationId)}&native=1`;
+  const response=await fetch(endpoint,{headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'}});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.url)throw new Error(data.message||'Não foi possível iniciar a conexão com o Strava.');
+  await Browser.open({url:data.url});
 };
 
 App.addListener('appUrlOpen',async ({url})=>{
@@ -15,7 +20,7 @@ App.addListener('appUrlOpen',async ({url})=>{
   try{await Browser.close();}catch{}
   if(url.startsWith('vazfitness://strava-connected')){
     history.replaceState({},'',location.pathname);
-    if(typeof refreshStravaStatus==='function')await refreshStravaStatus();
+    if(typeof refreshStravaStatus==='function')await refreshStravaStatus({force:true});
     if(typeof toast==='function')toast('Strava conectado com sucesso!');
   }
 });
