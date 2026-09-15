@@ -75,3 +75,11 @@
   document.head.appendChild(style);
   queueMicrotask(()=>{fixEmptyConsistency();applyCalendarFilter();});
 })();
+
+(function loadMembershipAndBranding(){
+  function load(src,done){
+    if(document.querySelector(`script[data-vaz-extra="${src}"]`)){done?.();return;}
+    const s=document.createElement('script');s.src=src;s.dataset.vazExtra=src;s.onload=()=>done?.();document.body.appendChild(s);
+  }
+  load('app-membership.js',()=>load('app-branding.js',()=>{try{render()}catch{}}));
+})();
