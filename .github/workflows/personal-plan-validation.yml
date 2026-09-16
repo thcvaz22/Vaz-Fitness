@@ -18,13 +18,16 @@ jobs:
       - name: Validate plan and experience modules
         run: |
           node --check lib/personal-plan-handler.js
+          node --check lib/remap-handler.js
           node --check api/health.js
           node --check api/aion.js
           node --check api/personal-ops.js
           node --check personal/plans-v5.js
           node --check personal/plan-pricing-v6.js
           node --check personal/training-planner-v6.js
+          node --check personal/remap-v7.js
           node --check app-experience-v6.js
+          node --check app-calendar-cycle-v7.js
           node --check app-polish-v2.js
       - name: Build Vaz Personal native bundle
         run: node scripts/build-personal-native-v2.mjs
@@ -33,14 +36,20 @@ jobs:
           test -f www-personal/plans-v5.js
           test -f www-personal/plan-pricing-v6.js
           test -f www-personal/training-planner-v6.js
+          test -f www-personal/remap-v7.js
           node --check www-personal/plans-v5.js
           node --check www-personal/plan-pricing-v6.js
           node --check www-personal/training-planner-v6.js
+          node --check www-personal/remap-v7.js
           grep -q "training-planner-v6.js" www-personal/index.html
+          grep -q "remap-v7.js" www-personal/index.html
       - name: Build Vaz Fitness native bundle
         run: node scripts/build-native.mjs
       - name: Validate packaged Fitness experience
         run: |
           test -f www/app-experience-v6.js
+          test -f www/app-calendar-cycle-v7.js
           node --check www/app-experience-v6.js
+          node --check www/app-calendar-cycle-v7.js
           grep -q "app-experience-v6.js" www/app-polish-v2.js
+          grep -q "app-calendar-cycle-v7.js" www/app-polish-v2.js
