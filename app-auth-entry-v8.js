@@ -24,6 +24,10 @@
   function setRegistrationStage(value){if(value)sessionStorage.setItem(REG_STAGE_KEY,value);else sessionStorage.removeItem(REG_STAGE_KEY);}
   function setGated(on=true){document.body.classList.toggle('vf-account-gated',!!on);}
   function setView(html){setGated(true);const view=document.getElementById('view');if(view)view.innerHTML=html;}
+  function closeOnboardingIfOpen(){
+    const dialog=document.getElementById('onboardingDialog');
+    if(dialog?.open){try{dialog.close();}catch{}}
+  }
   function safeStateForCloud(){
     const copy=JSON.parse(JSON.stringify(state||{}));
     delete copy.chat;delete copy.current;delete copy.currentRun;
@@ -39,6 +43,7 @@
     try{localStorage.setItem(DB_KEY,JSON.stringify(state));}catch{try{save();}catch{}}
   }
   function renderLogin(){
+    closeOnboardingIfOpen();
     setView(`<section class="vf-account-gate vf-entry-v8"><div class="vf-gate-card"><div class="vf-gate-brand"><div class="vf-id-logo">VF</div><div><span class="eyebrow">VAZ FITNESS</span><h1>Entre na sua conta.</h1></div></div><p>Já usa o Vaz Fitness? Entre normalmente. Se você reinstalou o aplicativo, não precisa refazer seu cadastro.</p><form id="vfEntryLogin" class="vf-account-form"><label>E-mail<input name="email" type="email" autocomplete="email" required></label><label>Senha<input name="password" type="password" minlength="8" autocomplete="current-password" required></label><button class="btn primary">Entrar</button></form><div class="vf-entry-divider"><span>ou</span></div><button class="btn dark vf-entry-new" id="vfEntryNewUser">Novo usuário</button><small class="vf-entry-helper">Primeiro acesso? Vamos coletar seus dados de treino e, no final, criar sua conta.</small></div></section>`);
     document.getElementById('vfEntryLogin')?.addEventListener('submit',loginExisting);
     document.getElementById('vfEntryNewUser')?.addEventListener('click',startNewUser);
@@ -50,6 +55,7 @@
     document.getElementById('vfEntryBackLogin')?.addEventListener('click',()=>{setRegistrationStage('');pendingCreated=null;renderLogin();});
   }
   function renderRestoring(){
+    closeOnboardingIfOpen();
     setView(`<section class="vf-account-gate"><div class="vf-gate-card checking"><div class="vf-spinner"></div><h2>Recuperando sua conta…</h2><p>Buscando seu perfil, seu treino e o vínculo com o personal.</p></div></section>`);
   }
   async function hydrateAccount(bearer,userHint=null){
@@ -136,6 +142,7 @@
       const stage=registrationStage();
       if(stage==='onboarding'&&state?.onboarded){setRegistrationStage('account');return renderCreateAccount();}
       if(stage==='account')return renderCreateAccount();
+      if(stage!=='onboarding')closeOnboardingIfOpen();
       return renderLogin();
     }
     if(!state?.onboarded){restoreAfterReinstall();return;}
