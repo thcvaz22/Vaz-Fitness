@@ -48,7 +48,15 @@
   renderProgress=function(){return injectFilter(priorRenderProgress());};
 
   const priorRender=render;
-  render=function(){priorRender();queueMicrotask(()=>{fixEmptyConsistency();applyCalendarFilter();});};
+  render=function(){
+    if(!window.__VAZ_AUTH_ENTRY_V8__&&!localStorage.getItem('vazFitness.authToken')){
+      document.body.classList.add('vf-account-gated');
+      const view=document.getElementById('view');
+      if(view)view.innerHTML='<section class="vf-account-gate"><div class="vf-gate-card checking"><div class="vf-spinner"></div><h2>Preparando seu acesso…</h2><p>Abrindo a tela de login do Vaz Fitness.</p></div></section>';
+      return;
+    }
+    priorRender();queueMicrotask(()=>{fixEmptyConsistency();applyCalendarFilter();});
+  };
 
   const priorBind=bindDynamic;
   bindDynamic=function(){
@@ -81,5 +89,5 @@
     if(document.querySelector(`script[data-vaz-extra="${src}"]`)){done?.();return;}
     const s=document.createElement('script');s.src=src;s.dataset.vazExtra=src;s.onload=()=>done?.();document.body.appendChild(s);
   }
-  load('app-membership.js',()=>load('app-branding.js',()=>load('app-custom-exercise-media.js',()=>load('app-scale-v1.js',()=>load('app-experience-v6.js',()=>load('app-calendar-cycle-v7.js',()=>{try{render()}catch{}}))))));
+  load('app-membership.js',()=>load('app-auth-entry-v8.js',()=>load('app-branding.js',()=>load('app-custom-exercise-media.js',()=>load('app-scale-v1.js',()=>load('app-experience-v6.js',()=>load('app-calendar-cycle-v7.js',()=>{try{render()}catch{}})))))));
 })();

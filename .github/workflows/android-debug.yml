@@ -29,8 +29,17 @@ jobs:
           java-version: '21'
       - name: Install dependencies
         run: npm install
+      - name: Validate authentication entry flow
+        run: |
+          node --check app-auth-entry-v8.js
+          node --check app-polish-v2.js
       - name: Prepare native web bundle
         run: npm run native:prepare
+      - name: Validate packaged authentication flow
+        run: |
+          test -f www/app-auth-entry-v8.js
+          node --check www/app-auth-entry-v8.js
+          grep -q "app-auth-entry-v8.js" www/app-polish-v2.js
       - name: Create Android project
         run: npx cap add android
       - name: Configure native permissions
