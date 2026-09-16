@@ -20,6 +20,7 @@ jobs:
           node --check lib/personal-plan-handler.js
           node --check api/health.js
           node --check api/aion.js
+          node --check api/personal-ops.js
           node --check personal/plans-v5.js
           node --check personal/plan-pricing-v6.js
           node --check personal/training-planner-v6.js
