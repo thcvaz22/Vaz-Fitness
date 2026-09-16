@@ -106,6 +106,7 @@
   };
 
   showStep();
-  const missingPhysical=state.onboarded&&(!state.profile.age||!state.profile.weight||!state.profile.height||!state.profile.sex||state.profile.profileVersion!==2);
+  const authenticated=!!localStorage.getItem('vazFitness.authToken');
+  const missingPhysical=authenticated&&state.onboarded&&(!state.profile.age||!state.profile.weight||!state.profile.height||!state.profile.sex||state.profile.profileVersion!==2);
   if(missingPhysical)setTimeout(()=>{toast('Atualizamos seu perfil. Complete idade, peso, altura e sexo para recalibrar o plano.');openOnboarding();},500);
 })();
