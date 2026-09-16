@@ -13,19 +13,33 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Validate plan modules
+      - name: Install dependencies
+        run: npm install
+      - name: Validate plan and experience modules
         run: |
           node --check lib/personal-plan-handler.js
           node --check api/health.js
+          node --check api/aion.js
           node --check personal/plans-v5.js
           node --check personal/plan-pricing-v6.js
+          node --check personal/training-planner-v6.js
+          node --check app-experience-v6.js
+          node --check app-polish-v2.js
       - name: Build Vaz Personal native bundle
         run: node scripts/build-personal-native-v2.mjs
-      - name: Validate packaged plan modules
+      - name: Validate packaged Personal modules
         run: |
           test -f www-personal/plans-v5.js
           test -f www-personal/plan-pricing-v6.js
+          test -f www-personal/training-planner-v6.js
           node --check www-personal/plans-v5.js
           node --check www-personal/plan-pricing-v6.js
-          grep -q "plans-v5.js" www-personal/index.html
-          grep -q "plan-pricing-v6.js" www-personal/index.html
+          node --check www-personal/training-planner-v6.js
+          grep -q "training-planner-v6.js" www-personal/index.html
+      - name: Build Vaz Fitness native bundle
+        run: node scripts/build-native.mjs
+      - name: Validate packaged Fitness experience
+        run: |
+          test -f www/app-experience-v6.js
+          node --check www/app-experience-v6.js
+          grep -q "app-experience-v6.js" www/app-polish-v2.js
