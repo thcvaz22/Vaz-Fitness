@@ -235,7 +235,8 @@
     return html.replace(/<\/section>\s*$/,`${card}</section>`);
   };
 
-  if(state.onboarded&&state.profile.onboardingVersion!==3){
+  const authenticated=!!localStorage.getItem('vazFitness.authToken');
+  if(authenticated&&state.onboarded&&state.profile.onboardingVersion!==3){
     setTimeout(()=>{toast('Atualizamos a avaliação: agora corrida e musculação têm níveis separados.');openOnboarding();},700);
   }
 })();
