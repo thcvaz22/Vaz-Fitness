@@ -5,7 +5,7 @@
   const API_BASE=window.VAZ_API_BASE||'';
   let authToken=localStorage.getItem(TOKEN_KEY)||'';
   let account={user:null,access:null,status:authToken?'checking':'guest',planVersion:0,lastCheck:0};
-  let authMode='register',cloudTimer=null,pulling=false;
+  let authMode='login',cloudTimer=null,pulling=false;
 
   function vfApiUrl(action){return `${API_BASE}/api/vf?action=${encodeURIComponent(action)}`;}
   async function vfApi(action,{method='GET',body=null}={}){

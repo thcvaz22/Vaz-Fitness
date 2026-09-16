@@ -75,7 +75,11 @@ function buildAionContext(){
   };
 }
 
-function openOnboarding(){const d=document.getElementById('onboardingDialog'); currentStep=1; showStep(); d.showModal()}
+function openOnboarding(){
+  // Guests must choose Novo usuário before any module can open the assessment.
+  if(!localStorage.getItem('vazFitness.authToken')&&sessionStorage.getItem('vazFitness.registrationStage.v8')!=='onboarding')return;
+  const d=document.getElementById('onboardingDialog');currentStep=1;showStep();if(!d.open)d.showModal();
+}
 let currentStep=1;
 function showStep(){
   document.querySelectorAll('.step').forEach(s=>s.classList.toggle('active',+s.dataset.step===currentStep));
@@ -162,5 +166,6 @@ function renderSetRow(ex,i){
   return `<div class="set-row"><span class="set-index" aria-label="Série ${i+1}">${i+1}</span><input type="number" inputmode="decimal" step="0.5" value="${prev?.load ?? ex.load}" data-set-load="${i}" aria-label="Peso em quilogramas da série ${i+1}" title="Peso (kg)"><input type="number" inputmode="numeric" value="${prev?.reps ?? repTarget(ex.reps)}" data-set-reps="${i}" aria-label="Repetições da série ${i+1}" title="Repetições"><button class="set-check ${prev?'done':''}" data-set-done="${i}" aria-label="Marcar série ${i+1} como concluída">${prev?'✓':'○'}</button></div>`
 }
 
-if(!state.onboarded || !state.plan.length){ if(state.onboarded&&!state.plan.length)generatePlan(); setTimeout(()=>{if(!state.onboarded)openOnboarding();},250); }
+// Authentication owns first entry. Never schedule onboarding at startup.
+if(state.onboarded&&!state.plan.length)generatePlan();
 render();

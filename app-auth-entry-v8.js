@@ -142,7 +142,9 @@
       const stage=registrationStage();
       if(stage==='onboarding'&&state?.onboarded){setRegistrationStage('account');return renderCreateAccount();}
       if(stage==='account')return renderCreateAccount();
-      if(stage!=='onboarding')closeOnboardingIfOpen();
+      // Background renders must not dismiss an assessment explicitly opened by the user.
+      if(stage==='onboarding'&&document.getElementById('onboardingDialog')?.open)return;
+      setRegistrationStage('');
       return renderLogin();
     }
     if(!state?.onboarded){restoreAfterReinstall();return;}
