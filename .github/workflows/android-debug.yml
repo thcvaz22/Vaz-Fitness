@@ -29,17 +29,21 @@ jobs:
           java-version: '21'
       - name: Install dependencies
         run: npm install
-      - name: Validate authentication entry flow
+      - name: Validate authentication and UX flows
         run: |
           node --check app-auth-entry-v8.js
+          node --check app-ux-v9.js
           node --check app-polish-v2.js
       - name: Prepare native web bundle
         run: npm run native:prepare
-      - name: Validate packaged authentication flow
+      - name: Validate packaged experience
         run: |
           test -f www/app-auth-entry-v8.js
+          test -f www/app-ux-v9.js
           node --check www/app-auth-entry-v8.js
+          node --check www/app-ux-v9.js
           grep -q "app-auth-entry-v8.js" www/app-polish-v2.js
+          grep -q "app-ux-v9.js" www/app-polish-v2.js
       - name: Create Android project
         run: npx cap add android
       - name: Configure native permissions
