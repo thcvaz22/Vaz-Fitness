@@ -12,7 +12,21 @@
   if(original3)original3.dataset.step='4';
   if(original4)original4.dataset.step='5';
   const restDays=Array.isArray(state.profile.restDays)?state.profile.restDays.map(Number):[];
-  if(original4)original4.insertAdjacentHTML('beforeend',`<fieldset class="rest-day-field"><legend>Dias que você quer descansar</legend><p class="step-helper">A AION não colocará treinos nesses dias.</p><div class="rest-day-options">${[['0','Dom'],['1','Seg'],['2','Ter'],['3','Qua'],['4','Qui'],['5','Sex'],['6','Sáb']].map(([v,l])=>`<label><input type="checkbox" name="restDays" value="${v}" ${restDays.includes(Number(v))?'checked':''}><span>${l}</span></label>`).join('')}</div></fieldset>`);
+  if(original4)original4.insertAdjacentHTML('beforeend',`<fieldset class="rest-day-field"><legend>Dias que você quer descansar</legend><p class="step-helper">A AION não colocará treinos nesses dias.</p><div class="rest-day-options">${[['0','Dom'],['1','Seg'],['2','Ter'],['3','Qua'],['4','Qui'],['5','Sex'],['6','Sáb']].map(([v,l])=>`<label><input type="checkbox" name="restDays" value="${v}" ${restDays.includes(Number(v))?'checked':''}><span>${l}</span></label>`).join('')}</div><small data-rest-limit></small></fieldset>`);
+
+  function alignRestDays(showMessage=false){
+    const trainingDays=Math.max(2,Math.min(6,Number(form.elements.days?.value)||4));
+    const maxRest=7-trainingDays,inputs=[...form.querySelectorAll('input[name="restDays"]')];
+    const checked=inputs.filter(input=>input.checked);
+    if(checked.length>maxRest){checked.slice(maxRest).forEach(input=>{input.checked=false});if(showMessage)toast(`Com ${trainingDays} dias de treino, escolha no máximo ${maxRest} dia(s) de descanso.`)}
+    const count=inputs.filter(input=>input.checked).length;
+    inputs.forEach(input=>{input.disabled=!input.checked&&count>=maxRest});
+    const helper=form.querySelector('[data-rest-limit]');
+    if(helper)helper.textContent=`Com ${trainingDays} dias de treino, você pode escolher até ${maxRest} dia(s) de descanso.`;
+  }
+  form.addEventListener('change',event=>{if(event.target?.matches?.('input[name="restDays"],input[name="days"]'))alignRestDays(true)},true);
+  form.addEventListener('input',event=>{if(event.target?.matches?.('input[name="days"]'))alignRestDays(true)},true);
+  alignRestDays();
 
   const physical=document.createElement('div');
   physical.className='step';

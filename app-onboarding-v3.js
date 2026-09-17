@@ -179,7 +179,8 @@
       return {...run,name,duration,intensity,pace:suggestRunPace(intensity),level:runningLevel};
     });
 
-    const days=Math.max(2,Math.min(6,+p.days||4));
+    const restCount=new Set((p.restDays||[]).map(Number).filter(d=>Number.isInteger(d)&&d>=0&&d<=6)).size;
+    const days=Math.max(2,Math.min(6,+p.days||4,7-restCount));
     const templates=runningLevel==='beginner'
       ? [['Corrida leve',25,'Leve'],['Caminhada + trote',30,'Leve'],['Corrida contínua',35,'Moderado']]
       : runningLevel==='advanced'

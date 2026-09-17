@@ -102,13 +102,14 @@ function cloneExercise(id){
 function getExerciseLimit(){ const m=+state.profile.minutes; return m<=30?4:m<=45?5:m<=60?6:m<=75?7:8; }
 function priorityRelated(ex){ const p=state.profile.priorityMuscle; if(p==='arms')return ['biceps','triceps','arms'].includes(ex.muscle); return ex.muscle===p || ex.secondary.includes(p); }
 function generatePlan(){
-  const days=Math.max(2,Math.min(6,+state.profile.days||4));
-  const base=splits[days];
-  const today=new Date().getDay();
   const preferred=[1,2,3,4,5,6,0];
   const restDays=[...new Set((state.profile.restDays||[]).map(Number).filter(d=>Number.isInteger(d)&&d>=0&&d<=6))].slice(0,5);
   const availableDays=preferred.filter(d=>!restDays.includes(d));
-  const trainingDays=availableDays.length>=2?availableDays:preferred;
+  const requestedDays=Math.max(2,Math.min(6,+state.profile.days||4));
+  const days=Math.max(2,Math.min(requestedDays,availableDays.length));
+  const base=splits[days];
+  const today=new Date().getDay();
+  const trainingDays=availableDays;
   const start=trainingDays.indexOf(today)>=0?trainingDays.indexOf(today):0;
   const scheduled=[];
   const limit=getExerciseLimit();

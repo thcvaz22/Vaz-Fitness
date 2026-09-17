@@ -78,6 +78,10 @@ function normalizeRestDays(value){
   const days=Array.isArray(value)?value.map(Number).filter(n=>Number.isInteger(n)&&n>=0&&n<=6):[];
   return [...new Set(days)].slice(0,5).sort((a,b)=>a-b);
 }
+function planRestDays(plan=[]){
+  const training=new Set((Array.isArray(plan)?plan:[]).map(day=>Number(day?.day)).filter(day=>Number.isInteger(day)&&day>=0&&day<=6));
+  return [0,1,2,3,4,5,6].filter(day=>!training.has(day));
+}
 async function ensureAdvancedTables(sql){
   await sql`CREATE TABLE IF NOT EXISTS vf_plan_change_requests (
     id text PRIMARY KEY,
@@ -211,6 +215,9 @@ export default async function handler(req,res){
       if(access?.status!=='approved'||!access?.personal_id)return sendError(res,409,'Você precisa estar vinculado a um personal com acesso liberado.','personal_required');
       const reason=cleanText(req.body?.reason,500),restDays=normalizeRestDays(req.body?.restDays);
       if(reason.length<8)return sendError(res,400,'Explique brevemente por que deseja mudar o treino.','reason_required');
+      const stateRows=await auth.sql`SELECT state FROM vf_cloud_state WHERE user_id=${auth.user.id} LIMIT 1`;
+      const weeklyDays=Math.max(2,Math.min(6,Number(stateRows[0]?.state?.profile?.days)||4));
+      if(restDays.length>7-weeklyDays)return sendError(res,400,`Com ${weeklyDays} dias de treino, escolha no máximo ${7-weeklyDays} dia(s) de descanso.`,'rest_days_conflict');
       await ensureAdvancedTables(auth.sql);
       const planRows=await auth.sql`SELECT plan_version FROM vf_training_plans WHERE athlete_id=${auth.user.id} LIMIT 1`;
       const currentVersion=Number(planRows[0]?.plan_version)||0;
@@ -286,6 +293,8 @@ export default async function handler(req,res){
       if(!client)return sendError(res,404,'Aluno não encontrado na sua carteira.','not_found');
       const plan=req.body?.plan,notes=cleanText(req.body?.notes,1000);
       if(!validatePlan(plan)||!plan.length)return sendError(res,400,'Plano inválido.','invalid_plan');
+      const publishedRestDays=planRestDays(plan);
+      if(publishedRestDays.length>5)return sendError(res,400,'O plano precisa distribuir treinos em pelo menos dois dias da semana.','insufficient_training_days');
       await ensureAdvancedTables(auth.sql);
       const activeRequests=await auth.sql`SELECT id,status FROM vf_plan_change_requests WHERE athlete_id=${athleteId} AND personal_id=${auth.user.id} AND status IN ('pending','reviewing') ORDER BY created_at DESC LIMIT 1`;
       if(activeRequests.length&&!requestId)return sendError(res,409,'Salve como rascunho ou use “Liberar novo treino”.','request_release_required');
@@ -298,10 +307,10 @@ export default async function handler(req,res){
         ON CONFLICT (athlete_id) DO UPDATE SET personal_id=EXCLUDED.personal_id,plan=EXCLUDED.plan,plan_version=vf_training_plans.plan_version+1,notes=EXCLUDED.notes,updated_at=now() RETURNING plan_version,updated_at`;
       if(requestId){
         await auth.sql`UPDATE vf_plan_change_requests SET status='completed',reviewed_at=COALESCE(reviewed_at,now()),completed_at=now(),draft_plan=CAST(${JSON.stringify(plan)} AS jsonb),draft_notes=${notes||null},draft_updated_at=now() WHERE id=${requestId} AND athlete_id=${athleteId} AND personal_id=${auth.user.id} AND status IN ('pending','reviewing')`;
-        await auth.sql`UPDATE vf_cloud_state SET state=CASE WHEN state ? 'planChangeRequest' THEN jsonb_set(state,'{planChangeRequest,status}','"completed"'::jsonb,true) ELSE state END,state_version=state_version+1,updated_at=now() WHERE user_id=${athleteId}`;
       }
-      await audit(auth.sql,auth.user.id,athleteId,requestId?'plan_request_released':'plan_updated',{days:plan.length,version:rows[0]?.plan_version,requestId:requestId||null});
-      return res.status(200).json({ok:true,...rows[0],requestId:requestId||null});
+      await auth.sql`UPDATE vf_cloud_state SET state=CASE WHEN ${!!requestId} AND state ? 'planChangeRequest' THEN jsonb_set(COALESCE(state,'{}'::jsonb)||jsonb_build_object('profile',COALESCE(state->'profile','{}'::jsonb)||jsonb_build_object('restDays',CAST(${JSON.stringify(publishedRestDays)} AS jsonb))),'{planChangeRequest,status}','"completed"'::jsonb,true) ELSE COALESCE(state,'{}'::jsonb)||jsonb_build_object('profile',COALESCE(state->'profile','{}'::jsonb)||jsonb_build_object('restDays',CAST(${JSON.stringify(publishedRestDays)} AS jsonb))) END,state_version=state_version+1,updated_at=now() WHERE user_id=${athleteId}`;
+      await audit(auth.sql,auth.user.id,athleteId,requestId?'plan_request_released':'plan_updated',{days:plan.length,restDays:publishedRestDays,version:rows[0]?.plan_version,requestId:requestId||null});
+      return res.status(200).json({ok:true,...rows[0],restDays:publishedRestDays,requestId:requestId||null});
     }
 
     if(action==='personal_access'&&method==='POST'){
