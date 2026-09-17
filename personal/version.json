@@ -1,6 +1,6 @@
 {
-  "version": "0.5.0",
-  "versionCode": 50,
-  "notes": "Central diária, notificações, histórico de planos, relatórios financeiros, backup e modo offline.",
+  "version": "0.5.1",
+  "versionCode": 51,
+  "notes": "Fluxo seguro de novo treino, sincronização automática com Vaz Fitness, respeito aos dias de descanso e liberação de ciclo protegida contra falhas de salvamento.",
   "downloadUrl": "https://github.com/thcvaz22/Vaz-Fitness/releases/download/vaz-apps-latest/Vaz-Personal.apk"
 }
