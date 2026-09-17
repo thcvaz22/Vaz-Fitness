@@ -45,6 +45,7 @@ jobs:
           node --check personal/coach-tools-v4.js
           node --check personal/advanced-v8.js
           node --check personal/safety-v9.js
+          node --check personal/exercise-gallery-v10.js
           node --check api/personal-auth.js
           node --check api/health.js
           node --check api/personal-ops.js
@@ -57,13 +58,16 @@ jobs:
       - name: Validate native bundle
         run: |
           test -f www-personal/safety-v9.js
+          test -f www-personal/exercise-gallery-v10.js
           node --check www-personal/app-v2.js
           node --check www-personal/training-library-v2.js
           node --check www-personal/exercise-catalog-v4.js
           node --check www-personal/coach-tools-v4.js
           node --check www-personal/advanced-v8.js
           node --check www-personal/safety-v9.js
+          node --check www-personal/exercise-gallery-v10.js
           grep -q "safety-v9.js" www-personal/index.html
+          grep -q "exercise-gallery-v10.js" www-personal/index.html
       - name: Use Vaz Personal Capacitor config
         run: cp capacitor.personal.config.json capacitor.config.json
       - name: Create Android project
