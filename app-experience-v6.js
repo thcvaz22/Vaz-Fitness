@@ -1,6 +1,5 @@
 // Vaz Fitness v6 — feedback pós-treino, lesões/limitações e metas gamificadas.
 (function installExperienceV6(){
-  let profileTab='profile';
   const pad=n=>String(n).padStart(2,'0');
   const monthKey=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}`};
   const dateKey=v=>{const d=new Date(v||0);return Number.isNaN(d.getTime())?'':`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
@@ -109,7 +108,6 @@
     };
   }
 
-  function profileTabs(){return `<div class="vf-experience-tabs"><button data-exp-tab="profile" class="${profileTab==='profile'?'active':''}">Perfil</button><button data-exp-tab="health" class="${profileTab==='health'?'active':''}">Lesões & limitações</button><button data-exp-tab="achievements" class="${profileTab==='achievements'?'active':''}">Metas & conquistas</button></div>`}
   function healthView(){
     const active=state.healthRecords.filter(x=>x.status!=='resolved');
     const history=state.healthRecords.filter(x=>x.status==='resolved');
@@ -151,8 +149,11 @@
     d.querySelector('form').onsubmit=e=>{e.preventDefault();const f=new FormData(e.currentTarget),metric=f.get('metric');state.customGameGoals.push({id:uid('goal'),title:String(f.get('title')||'').trim(),description:String(f.get('description')||'').trim(),metric,target:metric==='manual'?1:Math.max(1,Number(f.get('target'))||1),difficulty:clamp(f.get('difficulty'),1,4),medalKind:metric==='runKm'||metric==='runSessions'?'run':metric==='strengthSessions'?'strength':metric==='activeMinutes'?'flame':metric==='feedbacks'?'mind':'manual',createdAt:new Date().toISOString()});save();d.close();d.remove();render();toast('Meta criada. Boa jornada!')};
   }
 
-  const baseRenderProfile=renderProfile;
-  renderProfile=function(){syncExperience();const tabs=profileTabs();if(profileTab==='health')return `${tabs}${healthView()}`;if(profileTab==='achievements')return `${tabs}${achievementsView()}`;return `${tabs}${baseRenderProfile()}`};
+  // Lesões e conquistas são páginas principais; o Perfil contém apenas dados pessoais.
+  window.VazExperienceViews={
+    renderHealth(){syncExperience();return healthView()},
+    renderAchievements(){syncExperience();return achievementsView()}
+  };
 
   const baseContext=buildAionContext;
   buildAionContext=function(){
@@ -164,7 +165,6 @@
   const baseBind=bindDynamic;
   bindDynamic=function(){
     baseBind();
-    document.querySelectorAll('[data-exp-tab]').forEach(b=>b.onclick=()=>{profileTab=b.dataset.expTab;render()});
     document.querySelector('[data-health-add]')?.addEventListener('click',healthModal);
     document.querySelectorAll('[data-health-resolve]').forEach(b=>b.onclick=()=>{const r=state.healthRecords.find(x=>x.id===b.dataset.healthResolve);if(r){r.status='resolved';r.resolvedAt=new Date().toISOString();save();render();toast('Registro movido para o histórico.')}});
     document.querySelector('[data-goal-add]')?.addEventListener('click',goalModal);
