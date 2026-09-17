@@ -1,6 +1,6 @@
 {
-  "version": "0.5.4",
-  "versionCode": 54,
-  "notes": "Histórico visual de treinos com comparação entre versões, prévia completa e restauração protegida.",
+  "version": "0.5.5",
+  "versionCode": 55,
+  "notes": "Pesquisa de exercícios por nome, parte do corpo, origem e equipamento ao montar ou modificar treinos.",
   "downloadUrl": "https://github.com/thcvaz22/Vaz-Fitness/releases/download/vaz-apps-latest/Vaz-Personal.apk"
 }

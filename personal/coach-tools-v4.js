@@ -87,7 +87,7 @@
     let html=priorPlanDay(d,i);
     if(d.type==='run')return html;
     const marker=`<button class="vp-btn ghost" data-add-ex="${i}" style="margin-top:6px">+ Exercício</button>`;
-    const replacement=`<div class="vp-plan-add-actions"><button class="vp-btn primary" data-add-library="${i}">＋ Biblioteca AION</button><button class="vp-btn ghost" data-add-ex="${i}">+ Manual</button></div>`;
+    const replacement=`<div class="vp-plan-add-actions"><button class="vp-btn primary" data-add-library="${i}">⌕ Pesquisar na biblioteca</button><button class="vp-btn ghost" data-add-ex="${i}">+ Adicionar manualmente</button></div>`;
     return html.includes(marker)?html.replace(marker,replacement):html;
   };
   const priorExercise=renderExercise;
@@ -96,14 +96,14 @@
     const close='</button></div>';
     const pos=html.lastIndexOf(close);
     if(pos<0)return html;
-    const extra=`<button class="vp-btn ghost" data-swap-library="${di}:${ei}" style="margin-top:6px">↻ Trocar pela biblioteca</button>`;
+    const extra=`<button class="vp-btn ghost" data-swap-library="${di}:${ei}" style="margin-top:6px">⌕ Pesquisar / trocar exercício</button>`;
     return html.slice(0,pos+9)+extra+html.slice(pos+9);
   };
 
   const priorPlan=renderClientPlan;
   renderClientPlan=function(){
     let html=priorPlan();
-    const note=`<div class="vp-alert info vp-aion-catalog-note"><span>✦</span><div><strong>Biblioteca AION ${catalogVersion?`v${catalogVersion}`:''}</strong><small>${exerciseCatalog.length||'100+'} exercícios organizados por músculo e equipamento. Você pode trocar qualquer exercício sem digitar tudo novamente.</small></div></div>`;
+    const note=`<div class="vp-alert info vp-aion-catalog-note"><span>⌕</span><div><strong>Pesquisa inteligente de exercícios</strong><small>${exerciseCatalog.length||'100+'} opções na Biblioteca Vaz. Pesquise pelo nome ou filtre pela parte do corpo, origem e equipamento.</small></div></div>`;
     return html.replace('<div id="planDays">',`${note}<div id="planDays">`);
   };
 
@@ -142,17 +142,17 @@
   function openCatalogPicker(di,ei=null){
     if(!exerciseCatalog.length){toast('Carregando biblioteca AION…');loadCatalog().then(()=>openCatalogPicker(di,ei));return}
     const muscles=Object.entries(muscleNames),equip=equipmentOptions();
-    const m=showModal(`<div class="vp-page-head"><div><h2>${ei==null?'Adicionar exercício':'Trocar exercício'}</h2><p>Escolha na biblioteca AION ou nos seus exercícios personalizados.</p></div><button class="vp-btn ghost" id="closeCatalogPicker">×</button></div><div class="vp-catalog-picker-filters"><input id="catalogPickerSearch" placeholder="Buscar exercício"><select id="catalogPickerMuscle"><option value="all">Todos os músculos</option>${muscles.map(([v,l])=>`<option value="${v}">${safe(l)}</option>`).join('')}</select><select id="catalogPickerEquipment"><option value="all">Todos os equipamentos</option>${equip.map(x=>`<option value="${safe(x)}">${safe(x)}</option>`).join('')}</select></div><div class="vp-picker-count"><strong id="catalogPickerCount">${exerciseCatalog.length}</strong> opções</div><div id="catalogPickerList" class="vp-catalog-picker-list"></div>`);
+    const m=showModal(`<div class="vp-page-head"><div><h2>${ei==null?'Adicionar exercício':'Trocar exercício'}</h2><p>Pesquise pelo nome ou filtre pela parte do corpo que será trabalhada.</p></div><button class="vp-btn ghost" id="closeCatalogPicker">×</button></div><div class="vp-catalog-picker-filters"><input id="catalogPickerSearch" placeholder="Pesquisar pelo nome do exercício" autocomplete="off"><select id="catalogPickerMuscle" aria-label="Filtrar por parte do corpo"><option value="all">Todas as partes do corpo</option>${muscles.map(([v,l])=>`<option value="${v}">${safe(l)}</option>`).join('')}</select><select id="catalogPickerSource" aria-label="Filtrar por origem"><option value="all">Biblioteca completa</option><option value="personal">Meus exercícios</option><option value="builtin">Biblioteca Vaz</option></select><select id="catalogPickerEquipment" aria-label="Filtrar por equipamento"><option value="all">Todos os equipamentos</option>${equip.map(x=>`<option value="${safe(x)}">${safe(x)}</option>`).join('')}</select></div><div class="vp-picker-count"><strong id="catalogPickerCount">${exerciseCatalog.length}</strong> exercício(s) encontrado(s)</div><div id="catalogPickerList" class="vp-catalog-picker-list"></div>`);
     m.querySelector('#closeCatalogPicker').onclick=()=>m.remove();
-    const search=m.querySelector('#catalogPickerSearch'),muscle=m.querySelector('#catalogPickerMuscle'),equipment=m.querySelector('#catalogPickerEquipment'),list=m.querySelector('#catalogPickerList'),count=m.querySelector('#catalogPickerCount');
+    const search=m.querySelector('#catalogPickerSearch'),muscle=m.querySelector('#catalogPickerMuscle'),source=m.querySelector('#catalogPickerSource'),equipment=m.querySelector('#catalogPickerEquipment'),list=m.querySelector('#catalogPickerList'),count=m.querySelector('#catalogPickerCount');
     const draw=()=>{
-      const q=norm(search.value),mv=muscle.value,ev=equipment.value;
-      const filtered=exerciseCatalog.filter(e=>(!q||norm(`${e.name} ${muscleNames[e.muscle]||e.muscle} ${e.equipment}`).includes(q))&&(mv==='all'||e.muscle===mv)&&(ev==='all'||e.equipment===ev));
+      const q=norm(search.value),mv=muscle.value,sv=source.value,ev=equipment.value;
+      const filtered=exerciseCatalog.filter(e=>(!q||norm(`${e.name} ${muscleNames[e.muscle]||e.muscle} ${(e.secondary||[]).map(x=>muscleNames[x]||x).join(' ')} ${e.equipment}`).includes(q))&&(mv==='all'||e.muscle===mv)&&(sv==='all'||e.source===sv)&&(ev==='all'||e.equipment===ev));
       count.textContent=String(filtered.length);
-      list.innerHTML=filtered.slice(0,120).map(e=>`<button class="vp-picker-ex" data-pick-ex="${safe(e.id)}"><div><strong>${safe(e.name)}</strong><small>${safe(muscleNames[e.muscle]||e.muscle)} • ${safe(e.equipment||'—')}</small></div><div class="vp-picker-prescription"><span>${safe(e.reps||'8-12')}</span><b>${e.sets||3}x</b></div></button>`).join('')||'<div class="vp-empty">Nenhum exercício encontrado.</div>';
+      list.innerHTML=filtered.slice(0,150).map(e=>`<button class="vp-picker-ex" data-pick-ex="${safe(e.id)}"><div><strong>${safe(e.name)}</strong><small>${safe(muscleNames[e.muscle]||e.muscle)} • ${safe(e.equipment||'Sem equipamento')} • ${safe(sourceLabel(e))}</small></div><div class="vp-picker-prescription"><span>${safe(e.reps||'8-12')}</span><b>${e.sets||3}x</b></div></button>`).join('')||'<div class="vp-empty">Nenhum exercício encontrado com esses filtros.</div>';
       list.querySelectorAll('[data-pick-ex]').forEach(b=>b.onclick=()=>{const ex=catalogExercise(b.dataset.pickEx);if(!ex)return;m.remove();mutatePlan(p=>{const day=p[di];day.exercises=day.exercises||[];if(ei==null)day.exercises.push(pickerExercise(ex));else day.exercises[ei]=pickerExercise(ex)});toast(ei==null?'Exercício adicionado.':'Exercício substituído.');});
     };
-    [search,muscle,equipment].forEach(el=>el.addEventListener(el===search?'input':'change',draw));draw();setTimeout(()=>search.focus(),30);
+    [search,muscle,source,equipment].forEach(el=>el.addEventListener(el===search?'input':'change',draw));draw();setTimeout(()=>search.focus(),30);
   }
 
   function augmentExerciseLibraryDom(){

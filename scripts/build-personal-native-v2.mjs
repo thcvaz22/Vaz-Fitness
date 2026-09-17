@@ -16,6 +16,7 @@ const copies=[
   ['personal/exercise-catalog-v4.js',`${out}/exercise-catalog-v4.js`],
   ['personal/coach-tools-v4.css',`${out}/coach-tools-v4.css`],
   ['personal/coach-tools-v4.js',`${out}/coach-tools-v4.js`],
+  ['personal/exercise-picker-v14.css',`${out}/exercise-picker-v14.css`],
   ['personal/plans-v5.js',`${out}/plans-v5.js`],
   ['personal/plan-pricing-v6.js',`${out}/plan-pricing-v6.js`],
   ['personal/training-planner-v6.js',`${out}/training-planner-v6.js`],

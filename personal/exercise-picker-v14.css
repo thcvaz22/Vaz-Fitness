@@ -1,0 +1,63 @@
+/* Vaz Personal v14 — pesquisa de exercícios no editor de planos. */
+.vp-catalog-picker-filters{
+  grid-template-columns:minmax(210px,1.45fr) repeat(3,minmax(135px,.75fr));
+}
+
+.vp-template-ex{
+  grid-template-columns:minmax(210px,1.6fr) 64px 90px 78px auto;
+  margin-top:9px;
+}
+
+.vp-template-pick{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  width:100%;
+  min-height:48px;
+  border:1px solid rgba(20,20,20,.12);
+  border-radius:13px;
+  background:#fff;
+  padding:8px 10px;
+  text-align:left;
+  color:var(--text);
+  cursor:pointer;
+}
+
+.vp-template-pick:hover,.vp-template-pick:focus-visible{
+  border-color:rgba(245,196,0,.8);
+  box-shadow:0 0 0 3px rgba(245,196,0,.1);
+  outline:none;
+}
+
+.vp-template-pick span{min-width:0}
+.vp-template-pick strong,.vp-template-pick small{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.vp-template-pick strong{font-size:11px}
+.vp-template-pick small{margin-top:3px;color:var(--muted);font-size:9px}
+.vp-template-pick b{
+  flex:none;
+  border-radius:999px;
+  background:rgba(245,196,0,.18);
+  padding:5px 8px;
+  font-size:8px;
+}
+
+@media(max-width:980px){
+  .vp-catalog-picker-filters{grid-template-columns:1fr 1fr}
+  .vp-catalog-picker-filters input{grid-column:1/-1}
+}
+
+@media(max-width:680px){
+  .vp-template-ex{grid-template-columns:1fr 58px 76px}
+  .vp-template-exercise-choice{grid-column:1/-1}
+}
+
+@media(max-width:620px){
+  .vp-catalog-picker-filters{grid-template-columns:1fr}
+  .vp-catalog-picker-filters input{grid-column:auto}
+}
