@@ -21,6 +21,7 @@ const copies=[
   ['personal/training-planner-v6.js',`${out}/training-planner-v6.js`],
   ['personal/remap-v7.js',`${out}/remap-v7.js`],
   ['personal/advanced-v8.js',`${out}/advanced-v8.js`],
+  ['personal/safety-v9.js',`${out}/safety-v9.js`],
   ['personal/version.json',`${out}/version.json`],
   ['personal/sw.js',`${out}/sw.js`],
   ['personal/manifest.webmanifest',`${out}/manifest.webmanifest`],
@@ -31,4 +32,4 @@ for(const [src,dst] of copies){if(!existsSync(src))throw new Error(`Arquivo ause
 let html=await readFile(`${out}/index.html`,'utf8');
 html=html.replace('<script src="./app-v2.js"></script>',`<script>window.VAZ_PERSONAL_NATIVE=true;window.VAZ_API_BASE='https://vaz-fitness.vercel.app';document.documentElement.classList.add('native-app');</script>\n  <script src="./app-v2.js"></script>`);
 await writeFile(`${out}/index.html`,html);
-console.log('Vaz Personal native bundle: premium + biblioteca + planos + planejador + remanejamento semanal v7 pronto.');
+console.log('Vaz Personal native bundle: premium + biblioteca + planos + planejador + remanejamento semanal + segurança v9 pronto.');
