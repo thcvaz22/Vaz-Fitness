@@ -1,18 +1,6 @@
-const CACHE='vaz-fitness-v27-profile-cleanup';
+const CACHE='vaz-fitness-v28-brand-icons';
 const ASSETS=['./','./index.html','./styles.css','./app-core.js','./app-pt-guides.js','./app-ui.js','./app-training.js','./app-ai.js','./app-running.js','./app-profile-v2.js','./app-onboarding-v3.js','./app-calibration.js','./app-calendar.js','./app-integrations.js','./app-workout-exit.js','./app-training-details.js','./app-coach-v2.js','./app-running-plus.js','./app-polish-v2.js','./app-membership.js','./app-auth-entry-v8.js','./app-branding.js','./app-custom-exercise-media.js','./app-scale-v1.js','./app-experience-v6.js','./app-calendar-cycle-v7.js','./app-ux-v9.js','./app-plan-request-v10.js','./app-plan-sync-v11.js','./app-profile-cleanup-v12.js','./assets/body-measurement-guide-v2.png','./manifest.webmanifest','./icon.svg'];
 
-self.addEventListener('install',event=>{
-  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));
-  self.skipWaiting();
-});
-self.addEventListener('activate',event=>{
-  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))));
-  self.clients.claim();
-});
-self.addEventListener('fetch',event=>{
-  if(event.request.method!=='GET')return;
-  const url=new URL(event.request.url);
-  const isAppAsset=url.origin===self.location.origin&&(event.request.mode==='navigate'||['script','style','document'].includes(event.request.destination));
-  if(isAppAsset){event.respondWith(fetch(event.request).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));return response;}).catch(()=>caches.match(event.request).then(r=>r||caches.match('./index.html'))));return;}
-  event.respondWith(caches.match(event.request).then(cached=>cached||fetch(event.request)));
-});
+self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));self.skipWaiting();});
+self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))));self.clients.claim();});
+self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;const url=new URL(event.request.url);const isAppAsset=url.origin===self.location.origin&&(event.request.mode==='navigate'||['script','style','document'].includes(event.request.destination));if(isAppAsset){event.respondWith(fetch(event.request).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));return response;}).catch(()=>caches.match(event.request).then(r=>r||caches.match('./index.html'))));return;}event.respondWith(caches.match(event.request).then(cached=>cached||fetch(event.request)));});
