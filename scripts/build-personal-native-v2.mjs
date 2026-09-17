@@ -25,6 +25,7 @@ const copies=[
   ['personal/exercise-gallery-v10.js',`${out}/exercise-gallery-v10.js`],
   ['personal/visual-system-v11.js',`${out}/visual-system-v11.js`],
   ['personal/plan-request-workflow-v12.js',`${out}/plan-request-workflow-v12.js`],
+  ['personal/plan-history-v13.js',`${out}/plan-history-v13.js`],
   ['personal/version.json',`${out}/version.json`],
   ['personal/sw.js',`${out}/sw.js`],
   ['personal/manifest.webmanifest',`${out}/manifest.webmanifest`],

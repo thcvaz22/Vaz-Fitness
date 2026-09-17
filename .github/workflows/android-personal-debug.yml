@@ -21,6 +21,7 @@ on:
       - 'capacitor.personal.config.json'
       - 'scripts/build-personal-native-v2.mjs'
       - 'scripts/configure-app-icon.mjs'
+      - 'scripts/test-plan-history-v13.mjs'
       - 'vercel.json'
       - 'package.json'
       - '.github/workflows/android-personal-debug.yml'
@@ -50,6 +51,7 @@ jobs:
           node --check personal/exercise-gallery-v10.js
           node --check personal/visual-system-v11.js
           node --check personal/plan-request-workflow-v12.js
+          node --check personal/plan-history-v13.js
           node --check api/personal-auth.js
           node --check api/health.js
           node --check api/personal-ops.js
@@ -60,6 +62,7 @@ jobs:
           node --check lib/self-coached-access.js
           node --check lib/exercise-catalog-v4.js
           node scripts/test-personal-fitness-access.mjs
+          node scripts/test-plan-history-v13.mjs
       - name: Prepare Vaz Personal native bundle
         run: node scripts/build-personal-native-v2.mjs
       - name: Validate native bundle
@@ -68,6 +71,7 @@ jobs:
           test -f www-personal/exercise-gallery-v10.js
           test -f www-personal/visual-system-v11.js
           test -f www-personal/plan-request-workflow-v12.js
+          test -f www-personal/plan-history-v13.js
           node --check www-personal/app-v2.js
           node --check www-personal/training-library-v2.js
           node --check www-personal/exercise-catalog-v4.js
@@ -76,10 +80,12 @@ jobs:
           node --check www-personal/safety-v9.js
           node --check www-personal/exercise-gallery-v10.js
           node --check www-personal/visual-system-v11.js
+          node --check www-personal/plan-history-v13.js
           grep -q "safety-v9.js" www-personal/index.html
           grep -q "exercise-gallery-v10.js" www-personal/index.html
           grep -q "visual-system-v11.js" www-personal/index.html
           grep -q "plan-request-workflow-v12.js" www-personal/index.html
+          grep -q "plan-history-v13.js" www-personal/index.html
       - name: Use Vaz Personal Capacitor config
         run: cp capacitor.personal.config.json capacitor.config.json
       - name: Create Android project

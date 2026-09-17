@@ -1,6 +1,6 @@
 {
-  "version": "0.5.3",
-  "versionCode": 53,
-  "notes": "Fluxo de solicitação de novo treino com rascunho separado, revisão pelo personal e liberação explícita sem interromper o plano atual.",
+  "version": "0.5.4",
+  "versionCode": 54,
+  "notes": "Histórico visual de treinos com comparação entre versões, prévia completa e restauração protegida.",
   "downloadUrl": "https://github.com/thcvaz22/Vaz-Fitness/releases/download/vaz-apps-latest/Vaz-Personal.apk"
 }

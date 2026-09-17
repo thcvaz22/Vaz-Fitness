@@ -76,6 +76,10 @@ function applyRestDays(plan,restDays=[]){
   const available=[1,2,3,4,5,6,0].filter(d=>!blocked.includes(d));if(!available.length)return plan;
   return plan.map((day,index)=>blocked.includes(Number(day.day))?{...day,day:available[index%available.length]}:day);
 }
+function planRestDays(plan=[]){
+  const training=new Set((Array.isArray(plan)?plan:[]).map(day=>Number(day?.day)).filter(day=>Number.isInteger(day)&&day>=0&&day<=6));
+  return [0,1,2,3,4,5,6].filter(day=>!training.has(day));
+}
 const planSchema={
   type:'object',properties:{
     summary:{type:'string'},reasons:{type:'array',items:{type:'string'}},
@@ -122,17 +126,34 @@ export default async function handler(req,res){
     }
     if(req.method==='GET'&&action==='plan_history'){
       await ensureAdvancedTables(sql);const athleteId=clean(req.query?.athleteId,120);const client=await linked(sql,user.id,athleteId);if(!client)return sendError(res,404,'Aluno não encontrado.','not_found');
-      const rows=await sql`SELECT id,plan,notes,plan_version,source,created_at FROM vf_plan_history WHERE athlete_id=${athleteId} AND personal_id=${user.id} ORDER BY created_at DESC LIMIT 20`;
-      return res.status(200).json({ok:true,history:rows.map(r=>({...r,days:Array.isArray(r.plan)?r.plan.length:0}))});
+      const [rows,currentRows]=await Promise.all([
+        sql`SELECT id,plan,notes,plan_version,source,created_at FROM vf_plan_history WHERE athlete_id=${athleteId} AND personal_id=${user.id} ORDER BY created_at DESC LIMIT 20`,
+        sql`SELECT plan,notes,plan_version,updated_at FROM vf_training_plans WHERE athlete_id=${athleteId} LIMIT 1`
+      ]);
+      const current=currentRows[0]||null;
+      return res.status(200).json({ok:true,current:current?{...current,days:Array.isArray(current.plan)?current.plan.length:0,restDays:planRestDays(current.plan)}:null,history:rows.map(r=>({...r,days:Array.isArray(r.plan)?r.plan.length:0,restDays:planRestDays(r.plan)}))});
     }
     if(req.method==='POST'&&action==='restore_plan'){
-      await ensureAdvancedTables(sql);const athleteId=clean(req.body?.athleteId,120),historyId=clean(req.body?.historyId,160);const client=await linked(sql,user.id,athleteId);if(!client)return sendError(res,404,'Aluno não encontrado.','not_found');
+      await ensureAdvancedTables(sql);const athleteId=clean(req.body?.athleteId,120),historyId=clean(req.body?.historyId,160),expectedVersion=Number(req.body?.expectedVersion);const client=await linked(sql,user.id,athleteId);if(!client)return sendError(res,404,'Aluno não encontrado.','not_found');
+      if(!Number.isInteger(expectedVersion)||expectedVersion<1)return sendError(res,400,'Atualize o histórico antes de restaurar.','expected_version_required');
       const target=await sql`SELECT plan,notes,plan_version FROM vf_plan_history WHERE id=${historyId} AND athlete_id=${athleteId} AND personal_id=${user.id} LIMIT 1`;if(!target.length)return sendError(res,404,'Versão do plano não encontrada.','history_not_found');
-      const current=await sql`SELECT plan,notes,plan_version FROM vf_training_plans WHERE athlete_id=${athleteId} LIMIT 1`;
-      if(Array.isArray(current[0]?.plan)&&current[0].plan.length)await sql`INSERT INTO vf_plan_history (id,athlete_id,personal_id,plan,notes,plan_version,source) VALUES (${`history_${crypto.randomUUID()}`},${athleteId},${user.id},CAST(${JSON.stringify(current[0].plan)} AS jsonb),${current[0].notes||null},${Number(current[0].plan_version)||0},'before_restore')`;
-      const rows=await sql`UPDATE vf_training_plans SET plan=CAST(${JSON.stringify(target[0].plan)} AS jsonb),notes=${target[0].notes||null},plan_version=plan_version+1,updated_at=now() WHERE athlete_id=${athleteId} RETURNING plan_version,updated_at`;
-      await audit(sql,user.id,athleteId,'plan_restored',{historyId,restoredFromVersion:Number(target[0].plan_version)||0,newVersion:Number(rows[0]?.plan_version)||0});
-      return res.status(200).json({ok:true,plan:target[0].plan,notes:target[0].notes||'',...rows[0]});
+      if(!validPlan(target[0].plan))return sendError(res,409,'Esta versão antiga não possui um plano válido para restauração.','invalid_history_plan');
+      const restDays=planRestDays(target[0].plan),snapshotId=`history_${crypto.randomUUID()}`;
+      const rows=await sql`WITH current AS MATERIALIZED (
+          SELECT plan,notes,plan_version FROM vf_training_plans WHERE athlete_id=${athleteId} AND plan_version=${expectedVersion}
+        ), updated AS (
+          UPDATE vf_training_plans AS p SET plan=CAST(${JSON.stringify(target[0].plan)} AS jsonb),notes=${target[0].notes||null},plan_version=p.plan_version+1,updated_at=now()
+          WHERE p.athlete_id=${athleteId} AND p.plan_version=${expectedVersion} AND EXISTS (SELECT 1 FROM current)
+          RETURNING p.plan_version,p.updated_at
+        ), snapshot AS (
+          INSERT INTO vf_plan_history (id,athlete_id,personal_id,plan,notes,plan_version,source)
+          SELECT ${snapshotId},${athleteId},${user.id},current.plan,current.notes,current.plan_version,'before_restore' FROM current WHERE EXISTS (SELECT 1 FROM updated)
+          RETURNING id
+        ) SELECT updated.plan_version,updated.updated_at FROM updated WHERE EXISTS (SELECT 1 FROM snapshot)`;
+      if(!rows.length)return sendError(res,409,'O plano foi alterado em outro acesso. Atualize o histórico antes de restaurar.','plan_version_changed');
+      await sql`UPDATE vf_cloud_state SET state=COALESCE(state,'{}'::jsonb)||jsonb_build_object('profile',COALESCE(state->'profile','{}'::jsonb)||jsonb_build_object('restDays',CAST(${JSON.stringify(restDays)} AS jsonb))),state_version=state_version+1,updated_at=now() WHERE user_id=${athleteId}`;
+      await audit(sql,user.id,athleteId,'plan_restored',{historyId,restoredFromVersion:Number(target[0].plan_version)||0,replacedVersion:expectedVersion,newVersion:Number(rows[0]?.plan_version)||0,restDays});
+      return res.status(200).json({ok:true,plan:target[0].plan,notes:target[0].notes||'',restDays,restoredFromVersion:Number(target[0].plan_version)||0,...rows[0]});
     }
     if(req.method==='POST'&&action==='save_request_draft'){
       await ensureAdvancedTables(sql);
