@@ -40,6 +40,18 @@ jobs:
           java-version: '21'
       - name: Install dependencies
         run: npm install
+      - name: Validate source
+        run: |
+          node --check app-plan-request-v10.js
+          node --check app-plan-sync-v11.js
+          node --check personal/advanced-v8.js
+          node --check personal/safety-v9.js
+          node --check api/plan-draft.js
+          node --check api/vf.js
+          node --check api/personal-ops.js
+          node --check lib/personal-tools-handler.js
+          node scripts/test-auth-entry.mjs
+          node scripts/test-plan-request-v10.mjs
       - name: Decode permanent signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -47,17 +59,6 @@ jobs:
           test -n "$KEYSTORE_BASE64"
           echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/vaz-apps-release.jks"
           echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/vaz-apps-release.jks" >> "$GITHUB_ENV"
-      - name: Validate source
-        run: |
-          node --check app-plan-request-v10.js
-          node --check app-plan-sync-v11.js
-          node --check personal/advanced-v8.js
-          node --check personal/safety-v9.js
-          node --check api/vf.js
-          node --check api/personal-ops.js
-          node --check lib/personal-tools-handler.js
-          node scripts/test-auth-entry.mjs
-          node scripts/test-plan-request-v10.mjs
       - name: Build signed Vaz Personal APK
         run: |
           node scripts/build-personal-native-v2.mjs
