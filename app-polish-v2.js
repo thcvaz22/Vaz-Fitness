@@ -89,5 +89,5 @@
     if(document.querySelector(`script[data-vaz-extra="${src}"]`)){done?.();return;}
     const s=document.createElement('script');s.src=src;s.dataset.vazExtra=src;s.onload=()=>done?.();document.body.appendChild(s);
   }
-  load('app-membership.js',()=>load('app-auth-entry-v8.js',()=>load('app-branding.js',()=>load('app-custom-exercise-media.js',()=>load('app-scale-v1.js',()=>load('app-experience-v6.js',()=>load('app-calendar-cycle-v7.js',()=>load('app-ux-v9.js',()=>load('app-plan-request-v10.js',()=>{try{render()}catch{}})))))))));
+  load('app-membership.js',()=>load('app-auth-entry-v8.js',()=>load('app-branding.js',()=>load('app-custom-exercise-media.js',()=>load('app-scale-v1.js',()=>load('app-experience-v6.js',()=>load('app-calendar-cycle-v7.js',()=>load('app-ux-v9.js',()=>load('app-plan-request-v10.js',()=>load('app-plan-sync-v11.js',()=>{try{render()}catch{}}))))))))));
 })();
