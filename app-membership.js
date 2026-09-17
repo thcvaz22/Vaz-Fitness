@@ -60,7 +60,7 @@
     e.preventDefault();const fd=new FormData(e.currentTarget),button=e.currentTarget.querySelector('button');button.disabled=true;button.textContent='Aguarde…';
     try{
       const data=await vfApi(authMode==='register'?'register':'login',{method:'POST',body:authMode==='register'?{role:'athlete',name:fd.get('name'),email:fd.get('email'),password:fd.get('password')}:{email:fd.get('email'),password:fd.get('password')}});
-      if(data.user?.role!=='athlete')throw new Error('Esta conta não é uma conta de aluno.');
+      if(!['athlete','personal'].includes(data.user?.role))throw new Error('Esta conta não possui acesso ao Vaz Fitness.');
       authToken=data.token;localStorage.setItem(TOKEN_KEY,authToken);account.user=data.user;account.access=data.access||null;account.status='checking';
       if(authMode==='register')await submitProfileForApproval();
       await checkAccess(true);
@@ -157,7 +157,8 @@
   renderProfile=function(){
     const html=baseRenderProfile();
     if(account.status!=='approved')return html;
-    const card=`<div class="card"><div class="card-head"><div><h2>Conta e acompanhamento</h2><p>Vínculo com o Vaz Personal</p></div><span class="pill">SINCRONIZADO</span></div><div class="detail-list"><div class="detail-row"><span>Código ID</span><strong>${escapeHtml(publicCode())}</strong></div><div class="detail-row"><span>Personal</span><strong>${escapeHtml(account.access?.personal_name||'Vinculado')}</strong></div><div class="detail-row"><span>Status</span><strong>Liberado</strong></div></div><div class="hero-actions"><button class="btn ghost" data-vf-sync>Sincronizar agora</button><button class="btn danger-soft" data-vf-logout>Sair da conta</button></div></div>`;
+    const personalName=account.user?.role==='personal'?'Você mesmo':account.access?.personal_name||'Vinculado';
+    const card=`<div class="card"><div class="card-head"><div><h2>Conta e acompanhamento</h2><p>Vínculo com o Vaz Personal</p></div><span class="pill">SINCRONIZADO</span></div><div class="detail-list"><div class="detail-row"><span>Código ID</span><strong>${escapeHtml(publicCode())}</strong></div><div class="detail-row"><span>Personal</span><strong>${escapeHtml(personalName)}</strong></div><div class="detail-row"><span>Status</span><strong>Liberado</strong></div></div><div class="hero-actions"><button class="btn ghost" data-vf-sync>Sincronizar agora</button><button class="btn danger-soft" data-vf-logout>Sair da conta</button></div></div>`;
     return html.replace(/<\/section>\s*$/,`${card}</section>`);
   };
   const baseBindDynamic=bindDynamic;

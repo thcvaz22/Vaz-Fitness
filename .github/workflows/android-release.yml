@@ -50,8 +50,10 @@ jobs:
           node --check api/vf.js
           node --check api/personal-ops.js
           node --check lib/personal-tools-handler.js
+          node --check lib/self-coached-access.js
           node scripts/test-auth-entry.mjs
           node scripts/test-plan-request-v10.mjs
+          node scripts/test-personal-fitness-access.mjs
       - name: Decode permanent signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}

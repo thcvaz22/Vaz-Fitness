@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { neon } from '@neondatabase/serverless';
 import { applyCors } from './cors.js';
 import { makeState, requireStravaConfig, validInstallationId } from '../lib/strava-lib.js';
+import { ensureSelfCoachedAccess } from '../lib/self-coached-access.js';
 
 const SESSION_DAYS=30;
 const CODE_ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -53,9 +54,15 @@ async function authenticate(req,role=null){
     FROM vf_sessions s JOIN vf_users u ON u.id=s.user_id
     WHERE s.token_hash=${tokenHash(token)} AND s.expires_at>now() LIMIT 1`;
   const user=rows[0]||null;
-  if(!user||role&&user.role!==role)return null;
+  const allowedRoles=Array.isArray(role)?role:role?[role]:null;
+  if(!user||allowedRoles&&!allowedRoles.includes(user.role))return null;
   if(['personal','admin'].includes(user.role)&&user.account_status!=='approved')return null;
   return {sql,user,tokenHash:user.token_hash};
+}
+async function authenticateFitnessUser(req){
+  const auth=await authenticate(req,['athlete','personal']);
+  if(auth?.user.role==='personal')await ensureSelfCoachedAccess(auth.sql,auth.user.id);
+  return auth;
 }
 async function getAthleteAccess(sql,athleteId){
   const rows=await sql`SELECT a.athlete_id,a.personal_id,a.status,a.profile_submitted_at,a.approved_at,a.suspended_reason,a.updated_at,
@@ -144,9 +151,11 @@ export default async function handler(req,res){
       const actual=Buffer.from(passwordHash(password,row.password_salt),'hex'),expected=Buffer.from(row.password_hash,'hex');
       if(actual.length!==expected.length||!crypto.timingSafeEqual(actual,expected))return sendError(res,401,'E-mail ou senha inválidos.','invalid_credentials');
       if(['personal','admin'].includes(row.role)&&row.account_status!=='approved')return sendError(res,423,'Seu acesso não está disponível.','account_blocked');
+      if(row.role==='personal')await ensureSelfCoachedAccess(sql,row.id);
       const token=await issueSession(sql,row.id);
-      const access=row.role==='athlete'?await getAthleteAccess(sql,row.id):null;
-      return res.status(200).json({ok:true,token,user:publicUser(row),access});
+      const fitnessRole=['athlete','personal'].includes(row.role);
+      const access=fitnessRole?await getAthleteAccess(sql,row.id):null;
+      return res.status(200).json({ok:true,token,user:publicUser(row),access,selfCoached:row.role==='personal',profileRequired:row.role==='personal'&&!access?.profile_submitted_at});
     }
 
     if(action==='logout'&&method==='POST'){
@@ -157,12 +166,14 @@ export default async function handler(req,res){
 
     if(action==='me'&&method==='GET'){
       const auth=await authenticate(req);if(!auth)return sendError(res,401,'Sessão inválida.','unauthorized');
-      const access=auth.user.role==='athlete'?await getAthleteAccess(auth.sql,auth.user.id):null;
-      return res.status(200).json({ok:true,user:publicUser(auth.user),access});
+      if(auth.user.role==='personal')await ensureSelfCoachedAccess(auth.sql,auth.user.id);
+      const fitnessRole=['athlete','personal'].includes(auth.user.role);
+      const access=fitnessRole?await getAthleteAccess(auth.sql,auth.user.id):null;
+      return res.status(200).json({ok:true,user:publicUser(auth.user),access,selfCoached:auth.user.role==='personal',profileRequired:auth.user.role==='personal'&&!access?.profile_submitted_at});
     }
 
     if(action==='strava_oauth_url'&&method==='GET'){
-      const auth=await authenticate(req,'athlete');if(!auth)return sendError(res,401,'Sessão inválida.','unauthorized');
+      const auth=await authenticateFitnessUser(req);if(!auth)return sendError(res,401,'Sessão inválida.','unauthorized');
       const access=await getAthleteAccess(auth.sql,auth.user.id);if(access?.status!=='approved')return sendError(res,423,'Seu acesso precisa estar liberado antes de conectar o Strava.','athlete_not_approved');
       const installationId=String(req.query?.installationId||'');if(!validInstallationId(installationId))return sendError(res,400,'installationId inválido.','invalid_installation');
       requireStravaConfig();
@@ -176,22 +187,31 @@ export default async function handler(req,res){
     }
 
     if(action==='submit_profile'&&method==='POST'){
-      const auth=await authenticate(req,'athlete');if(!auth)return sendError(res,401,'Sessão inválida.','unauthorized');
+      const auth=await authenticateFitnessUser(req);if(!auth)return sendError(res,401,'Sessão inválida.','unauthorized');
+      const selfCoached=auth.user.role==='personal';
       const state=isObject(req.body?.state)?req.body.state:null,plan=req.body?.plan;
       if(!state||jsonSize(state)>2000000)return sendError(res,400,'Perfil inválido ou muito grande.','invalid_state');
       if(!validatePlan(plan))return sendError(res,400,'Plano de treino inválido.','invalid_plan');
       await auth.sql`INSERT INTO vf_cloud_state (user_id,state,state_version,updated_at) VALUES (${auth.user.id},CAST(${JSON.stringify(state)} AS jsonb),1,now())
         ON CONFLICT (user_id) DO UPDATE SET state=EXCLUDED.state,state_version=vf_cloud_state.state_version+1,updated_at=now()`;
-      await auth.sql`UPDATE vf_athlete_access SET profile_submitted_at=COALESCE(profile_submitted_at,now()),status=CASE WHEN status='suspended' THEN status ELSE 'pending' END,updated_at=now() WHERE athlete_id=${auth.user.id}`;
+      await auth.sql`UPDATE vf_athlete_access SET
+        personal_id=CASE WHEN ${selfCoached} THEN ${auth.user.id} ELSE personal_id END,
+        profile_submitted_at=COALESCE(profile_submitted_at,now()),
+        status=CASE WHEN ${selfCoached} THEN 'approved' WHEN status='suspended' THEN status ELSE 'pending' END,
+        approved_at=CASE WHEN ${selfCoached} THEN COALESCE(approved_at,now()) ELSE approved_at END,
+        suspended_reason=CASE WHEN ${selfCoached} THEN NULL ELSE suspended_reason END,
+        updated_at=now()
+        WHERE athlete_id=${auth.user.id}`;
       await auth.sql`INSERT INTO vf_training_plans (athlete_id,plan,plan_version,updated_at) VALUES (${auth.user.id},CAST(${JSON.stringify(plan)} AS jsonb),1,now())
         ON CONFLICT (athlete_id) DO UPDATE SET plan=EXCLUDED.plan,plan_version=vf_training_plans.plan_version+1,updated_at=now()`;
-      await audit(auth.sql,auth.user.id,auth.user.id,'profile_submitted',{planDays:plan.length});
+      if(selfCoached)await auth.sql`UPDATE vf_training_plans SET personal_id=${auth.user.id},updated_at=now() WHERE athlete_id=${auth.user.id}`;
+      await audit(auth.sql,auth.user.id,auth.user.id,'profile_submitted',{planDays:plan.length,selfCoached});
       const access=await getAthleteAccess(auth.sql,auth.user.id);
       return res.status(200).json({ok:true,publicCode:auth.user.public_code,access});
     }
 
     if(action==='cloud_state'&&method==='GET'){
-      const auth=await authenticate(req,'athlete');if(!auth)return sendError(res,401,'Sessão inválida.','unauthorized');
+      const auth=await authenticateFitnessUser(req);if(!auth)return sendError(res,401,'Sessão inválida.','unauthorized');
       const access=await getAthleteAccess(auth.sql,auth.user.id);
       if(access?.status==='suspended')return sendError(res,423,'Não foi possível entrar, contate seu personal.','suspended');
       const rows=await auth.sql`SELECT state,state_version,updated_at FROM vf_cloud_state WHERE user_id=${auth.user.id} LIMIT 1`;
@@ -199,7 +219,7 @@ export default async function handler(req,res){
     }
 
     if(action==='cloud_state'&&method==='POST'){
-      const auth=await authenticate(req,'athlete');if(!auth)return sendError(res,401,'Sessão inválida.','unauthorized');
+      const auth=await authenticateFitnessUser(req);if(!auth)return sendError(res,401,'Sessão inválida.','unauthorized');
       const access=await getAthleteAccess(auth.sql,auth.user.id);
       if(access?.status!=='approved')return sendError(res,423,access?.status==='suspended'?'Não foi possível entrar, contate seu personal.':'Seu treino ainda não foi liberado pelo personal.',access?.status||'pending');
       const state=isObject(req.body?.state)?req.body.state:null;
@@ -210,7 +230,7 @@ export default async function handler(req,res){
     }
 
     if(action==='plan_change_request'&&method==='POST'){
-      const auth=await authenticate(req,'athlete');if(!auth)return sendError(res,401,'Sessão inválida.','unauthorized');
+      const auth=await authenticateFitnessUser(req);if(!auth)return sendError(res,401,'Sessão inválida.','unauthorized');
       const access=await getAthleteAccess(auth.sql,auth.user.id);
       if(access?.status!=='approved'||!access?.personal_id)return sendError(res,409,'Você precisa estar vinculado a um personal com acesso liberado.','personal_required');
       const reason=cleanText(req.body?.reason,500),restDays=normalizeRestDays(req.body?.restDays);
@@ -236,18 +256,18 @@ export default async function handler(req,res){
     }
 
     if(action==='plan_change_request'&&method==='GET'){
-      const auth=await authenticate(req,'athlete');if(!auth)return sendError(res,401,'Sessão inválida.','unauthorized');
+      const auth=await authenticateFitnessUser(req);if(!auth)return sendError(res,401,'Sessão inválida.','unauthorized');
       await ensureAdvancedTables(auth.sql);
       const rows=await auth.sql`SELECT id,reason,rest_days,status,created_at,reviewed_at,completed_at FROM vf_plan_change_requests WHERE athlete_id=${auth.user.id} ORDER BY created_at DESC LIMIT 1`;
       return res.status(200).json({ok:true,request:rows[0]||null});
     }
 
     if(action==='athlete_access'&&method==='GET'){
-      const auth=await authenticate(req,'athlete');if(!auth)return sendError(res,401,'Sessão inválida.','unauthorized');
+      const auth=await authenticateFitnessUser(req);if(!auth)return sendError(res,401,'Sessão inválida.','unauthorized');
       const access=await getAthleteAccess(auth.sql,auth.user.id);
       const plans=await auth.sql`SELECT plan,plan_version,notes,updated_at FROM vf_training_plans WHERE athlete_id=${auth.user.id} LIMIT 1`;
       const plan=plans[0]||null;
-      return res.status(200).json({ok:true,user:publicUser(auth.user),access,plan:access?.status==='approved'?plan:null});
+      return res.status(200).json({ok:true,user:publicUser(auth.user),access,plan:access?.status==='approved'?plan:null,selfCoached:auth.user.role==='personal',profileRequired:auth.user.role==='personal'&&!access?.profile_submitted_at});
     }
 
     if(action==='personal_clients'&&method==='GET'){
@@ -259,7 +279,7 @@ export default async function handler(req,res){
         CASE WHEN jsonb_typeof(c.state->'runSessions')='array' THEN jsonb_array_length(c.state->'runSessions') ELSE 0 END AS run_sessions
         FROM vf_athlete_access a JOIN vf_users u ON u.id=a.athlete_id
         LEFT JOIN vf_cloud_state c ON c.user_id=u.id LEFT JOIN vf_training_plans p ON p.athlete_id=u.id
-        WHERE a.personal_id=${auth.user.id} ORDER BY a.updated_at DESC`;
+        WHERE a.personal_id=${auth.user.id} AND u.role='athlete' ORDER BY a.updated_at DESC`;
       const clients=rows.map(r=>({id:r.id,name:r.name,email:r.email,publicCode:r.public_code,status:r.status,profileSubmittedAt:r.profile_submitted_at,approvedAt:r.approved_at,planVersion:Number(r.plan_version)||0,summary:{mode:r.mode||null,goal:r.goal||null,age:r.age?Number(r.age):null,weight:r.weight?Number(r.weight):null,weeklyDays:r.weekly_days?Number(r.weekly_days):null,strengthSessions:Number(r.strength_sessions)||0,runSessions:Number(r.run_sessions)||0,lastActivity:null,recentRuns:[],recentStrength:[]}}));
       return res.status(200).json({ok:true,clients});
     }
@@ -317,6 +337,7 @@ export default async function handler(req,res){
       const auth=await authenticate(req,'personal');if(!auth)return sendError(res,401,'Sessão inválida.','unauthorized');
       const athleteId=cleanText(req.body?.athleteId,120),client=await linkedClient(auth.sql,auth.user.id,athleteId);
       if(!client)return sendError(res,404,'Aluno não encontrado na sua carteira.','not_found');
+      if(athleteId===auth.user.id)return sendError(res,409,'Seu acesso próprio ao Vaz Fitness é liberado automaticamente.','self_access_managed');
       const mode=String(req.body?.mode||'');
       if(!['approve','suspend','reactivate'].includes(mode))return sendError(res,400,'Ação inválida.','invalid_action');
       if(mode==='approve'){

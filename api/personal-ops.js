@@ -102,7 +102,7 @@ export default async function handler(req,res){
       const rows=await sql`SELECT u.id,u.name,u.public_code,a.status,p.plan_version,p.cycle_days,p.cycle_started_at,p.cycle_ends_at,b.monthly_amount,b.billing_day,b.next_due_date,b.force_pending
         FROM vf_athlete_access a JOIN vf_users u ON u.id=a.athlete_id
         LEFT JOIN vf_training_plans p ON p.athlete_id=u.id LEFT JOIN vf_billing_accounts b ON b.athlete_id=u.id
-        WHERE a.personal_id=${user.id} ORDER BY u.name`;
+        WHERE a.personal_id=${user.id} AND a.athlete_id<>a.personal_id ORDER BY u.name`;
       const clients=rows.map(r=>({id:r.id,name:r.name,publicCode:r.public_code,accessStatus:r.status,planVersion:Number(r.plan_version)||0,cycle:cycleInfo(r),billing:billingInfo(r)}));
       const requests=await sql`SELECT r.id,r.athlete_id,r.reason,r.rest_days,r.status,r.current_plan_version,r.created_at,u.name,u.public_code FROM vf_plan_change_requests r JOIN vf_users u ON u.id=r.athlete_id WHERE r.personal_id=${user.id} AND r.status IN ('pending','reviewing') ORDER BY r.created_at ASC`;
       const alerts=[];for(const c of clients){if(c.cycle.status==='expired')alerts.push({kind:'cycle',severity:'danger',athleteId:c.id,name:c.name,message:'Treino vencido — precisa de novo ciclo.'});else if(c.cycle.status==='due_soon')alerts.push({kind:'cycle',severity:'warning',athleteId:c.id,name:c.name,message:`Treino vence em ${Math.max(0,c.cycle.daysLeft)} dia(s).`});if(c.billing.status==='pending')alerts.push({kind:'billing',severity:'danger',athleteId:c.id,name:c.name,message:`Mensalidade pendente${c.billing.nextDueDate?` desde ${c.billing.nextDueDate}`:''}.`})}

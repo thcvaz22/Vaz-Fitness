@@ -8,6 +8,7 @@
   const REG_STAGE_KEY='vazFitness.registrationStage.v8';
   const API_BASE=window.VAZ_API_BASE||'';
   let restoring=false;
+  let selfOnboardingBusy=false;
   let pendingCreated=null;
 
   function token(){return localStorage.getItem(TOKEN_KEY)||'';}
@@ -61,6 +62,14 @@
   async function hydrateAccount(bearer,userHint=null){
     const accessData=await api('athlete_access',{bearer});
     const access=accessData.access||null;
+    const user=accessData.user||userHint;
+    if(accessData.selfCoached&&accessData.profileRequired){
+      const fresh=defaultState();
+      state={...fresh,profile:{...(fresh.profile||{}),name:user?.name||''},plan:[],sessions:[],runSessions:[],skipped:[],onboarded:false};
+      persistState();
+      if(user?.id)localStorage.setItem(CLOUD_USER_KEY,user.id);
+      return accessData;
+    }
     let remote=null;
     if(access?.status==='approved'){
       try{remote=(await api('cloud_state',{bearer})).state||null;}catch{}
@@ -68,7 +77,6 @@
     if(remote&&typeof remote==='object')state={...state,...remote,onboarded:true};
     else state={...state,onboarded:true};
     if(accessData.plan?.plan&&Array.isArray(accessData.plan.plan))state.plan=accessData.plan.plan;
-    const user=accessData.user||userHint;
     if(user?.name&&state.profile)state.profile={...state.profile,name:state.profile.name||user.name};
     persistState();
     if(user?.id)localStorage.setItem(CLOUD_USER_KEY,user.id);
@@ -80,11 +88,12 @@
     if(button){button.disabled=true;button.textContent='Entrando…';}
     try{
       const data=await api('login',{method:'POST',body:{email:String(fd.get('email')||'').trim(),password:String(fd.get('password')||'')}});
-      if(data.user?.role!=='athlete')throw new Error('Esta conta não é uma conta de aluno.');
-      try{await hydrateAccount(data.token,data.user);}catch{}
+      if(!['athlete','personal'].includes(data.user?.role))throw new Error('Esta conta não possui acesso ao Vaz Fitness.');
+      let accessData=data;
+      try{accessData=await hydrateAccount(data.token,data.user);}catch(error){if(data.user?.role==='personal')throw error;}
       localStorage.setItem(TOKEN_KEY,data.token);
       if(data.user?.id)localStorage.setItem(CLOUD_USER_KEY,data.user.id);
-      setRegistrationStage('');
+      setRegistrationStage(data.user?.role==='personal'&&accessData?.profileRequired?'self-onboarding':'');
       location.reload();
     }catch(error){toast(error.message||'Não foi possível entrar.');if(button){button.disabled=false;button.textContent='Entrar';}}
   }
@@ -108,6 +117,30 @@
     const dialog=document.getElementById('onboardingDialog');
     if(!dialog)return toast('Não foi possível abrir o cadastro agora.');
     if(!dialog.open)dialog.showModal();
+  }
+  function openSelfOnboarding(){
+    const dialog=document.getElementById('onboardingDialog');
+    if(dialog?.open)return;
+    setView(`<section class="vf-account-gate"><div class="vf-gate-card checking"><h2>Complete seu perfil no Vaz Fitness</h2><p>Seu acesso de personal já está liberado. Falta apenas montar o seu próprio perfil de treino.</p></div></section>`);
+    resetOnboardingForm();
+    const name=document.getElementById('onboardingForm')?.elements?.namedItem?.('name');
+    if(name&&state?.profile?.name)name.value=state.profile.name;
+    if(!dialog)return toast('Não foi possível abrir seu perfil agora.');
+    if(!dialog.open)dialog.showModal();
+  }
+  function renderSelfSubmitError(message){
+    closeOnboardingIfOpen();
+    setView(`<section class="vf-account-gate"><div class="vf-gate-card"><span class="eyebrow">VAZ FITNESS</span><h2>Não foi possível salvar seu perfil</h2><p>${escapeHtml(message||'Tente novamente para concluir seu acesso.')}</p><button class="btn primary" id="vfRetrySelfProfile">Tentar novamente</button></div></section>`);
+    document.getElementById('vfRetrySelfProfile')?.addEventListener('click',finishSelfOnboarding);
+  }
+  async function finishSelfOnboarding(){
+    if(selfOnboardingBusy)return;
+    selfOnboardingBusy=true;setRegistrationStage('self-submitting');renderRestoring();
+    try{
+      await api('submit_profile',{method:'POST',bearer:token(),body:{state:safeStateForCloud(),plan:Array.isArray(state.plan)?state.plan:[]}});
+      await hydrateAccount(token());
+      setRegistrationStage('');location.reload();
+    }catch(error){selfOnboardingBusy=false;setRegistrationStage('self-error');renderSelfSubmitError(error.message);}
   }
   async function createAccount(event){
     event.preventDefault();
@@ -147,6 +180,13 @@
       setRegistrationStage('');
       return renderLogin();
     }
+    const stage=registrationStage();
+    if(stage==='self-onboarding'){
+      if(state?.onboarded){finishSelfOnboarding();return;}
+      openSelfOnboarding();return;
+    }
+    if(stage==='self-submitting'){renderRestoring();return;}
+    if(stage==='self-error'){renderSelfSubmitError('Seu perfil continua salvo neste aparelho. Tente enviar novamente.');return;}
     if(!state?.onboarded){restoreAfterReinstall();return;}
     setGated(false);return previousRender();
   };
@@ -158,6 +198,9 @@
   document.head.appendChild(style);
 
   const onboarding=document.getElementById('onboardingDialog');
-  onboarding?.addEventListener('cancel',()=>{if(registrationStage()==='onboarding'&&!state?.onboarded){setRegistrationStage('');queueMicrotask(()=>render());}});
+  onboarding?.addEventListener('cancel',event=>{
+    if(registrationStage()==='self-onboarding'){event.preventDefault();toast('Conclua seu perfil para entrar no Vaz Fitness.');return;}
+    if(registrationStage()==='onboarding'&&!state?.onboarded){setRegistrationStage('');queueMicrotask(()=>render());}
+  });
   queueMicrotask(()=>{try{render()}catch{}});
 })();

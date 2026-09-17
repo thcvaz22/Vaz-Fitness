@@ -85,6 +85,11 @@ test('authenticated users can explicitly reopen their assessment', () => {
   const app = boot({ authenticated: true, onboarded: true }); app.loadAuth();
   app.context.openOnboarding(); assert.equal(app.node('onboardingDialog').open, true);
 });
+test('personal first access opens self onboarding without a second account', () => {
+  const app = boot({ authenticated: true, onboarded: false, stage: 'self-onboarding' }); app.loadAuth();
+  assert.equal(app.node('onboardingDialog').open, true);
+  assert.match(app.node('view').innerHTML, /Seu acesso de personal já está liberado/);
+});
 test('legacy membership gate defaults to login, never registration', () => {
   assert.match(source('app-membership.js'), /let authMode='login'/);
 });

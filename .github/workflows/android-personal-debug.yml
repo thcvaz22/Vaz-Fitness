@@ -14,6 +14,8 @@ on:
       - 'lib/admin-handler.js'
       - 'lib/training-library-handler.js'
       - 'lib/personal-tools-handler.js'
+      - 'lib/personal-plan-handler.js'
+      - 'lib/self-coached-access.js'
       - 'lib/exercise-catalog-v4.js'
       - 'lib/cors.js'
       - 'capacitor.personal.config.json'
@@ -54,7 +56,10 @@ jobs:
           node --check lib/admin-handler.js
           node --check lib/training-library-handler.js
           node --check lib/personal-tools-handler.js
+          node --check lib/personal-plan-handler.js
+          node --check lib/self-coached-access.js
           node --check lib/exercise-catalog-v4.js
+          node scripts/test-personal-fitness-access.mjs
       - name: Prepare Vaz Personal native bundle
         run: node scripts/build-personal-native-v2.mjs
       - name: Validate native bundle

@@ -12,6 +12,8 @@ on:
       - 'native-entry.js'
       - 'capacitor.config.json'
       - 'scripts/**'
+      - 'api/**'
+      - 'lib/**'
       - 'package.json'
       - '.github/workflows/android-debug.yml'
 
@@ -37,6 +39,9 @@ jobs:
           node --check app-plan-request-v10.js
           node --check app-plan-sync-v11.js
           node --check api/vf.js
+          node --check lib/self-coached-access.js
+          node scripts/test-auth-entry.mjs
+          node scripts/test-personal-fitness-access.mjs
       - name: Prepare native web bundle
         run: npm run native:prepare
       - name: Validate packaged experience

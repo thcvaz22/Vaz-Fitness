@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { neon } from '@neondatabase/serverless';
 import { applyCors } from './cors.js';
+import { ensureSelfCoachedAccess } from '../lib/self-coached-access.js';
 
 const SESSION_DAYS=30;
 const CODE_ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -53,6 +54,7 @@ export default async function handler(req,res){
       if(row.role==='personal'&&row.account_status==='pending')return sendError(res,403,'Seu cadastro foi recebido e aguarda aprovação do administrador.','approval_pending');
       if(['personal','admin'].includes(row.role)&&row.account_status==='suspended')return sendError(res,423,'Seu acesso está suspenso. Entre em contato com o administrador.','account_suspended');
       if(!['personal','admin'].includes(row.role))return sendError(res,403,'Esta conta não possui acesso ao Vaz Personal.','wrong_role');
+      if(row.role==='personal')await ensureSelfCoachedAccess(sql,row.id);
       const token=await issueSession(sql,row.id);return res.status(200).json({ok:true,token,user:publicUser(row)});
     }
 
