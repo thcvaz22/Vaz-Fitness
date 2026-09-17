@@ -1,6 +1,6 @@
 // Vaz Personal v9 — rascunho separado da liberação, validação de descanso e sincronização segura.
 (()=>{
-  const draftApi=(athleteId,o={})=>req('/api/plan-draft',{...o,params:{...(o.params||{}),athleteId}});
+  const draftApi=(athleteId,o={})=>req('/api/personal-tools',{...o,params:{...(o.params||{}),action:'plan_draft',athleteId}});
 
   function activeRestDays(){
     const request=(selectedOps?.requests||[]).find(r=>['pending','reviewing'].includes(r.status));
