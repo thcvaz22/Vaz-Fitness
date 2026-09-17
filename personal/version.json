@@ -1,6 +1,6 @@
 {
-  "version": "0.5.5",
-  "versionCode": 55,
-  "notes": "Pesquisa de exercícios por nome, parte do corpo, origem e equipamento ao montar ou modificar treinos.",
+  "version": "0.5.6",
+  "versionCode": 56,
+  "notes": "Central O que fazer hoje com prioridades acionáveis, filtros, adiamento e notificações configuráveis.",
   "downloadUrl": "https://github.com/thcvaz22/Vaz-Fitness/releases/download/vaz-apps-latest/Vaz-Personal.apk"
 }

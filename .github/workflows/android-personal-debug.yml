@@ -23,6 +23,7 @@ on:
       - 'scripts/configure-app-icon.mjs'
       - 'scripts/test-plan-history-v13.mjs'
       - 'scripts/test-exercise-picker-v14.mjs'
+      - 'scripts/test-today-center-v15.mjs'
       - 'vercel.json'
       - 'package.json'
       - '.github/workflows/android-personal-debug.yml'
@@ -56,6 +57,8 @@ jobs:
           node --check personal/training-library-v2.js
           node --check personal/coach-tools-v4.js
           node scripts/test-exercise-picker-v14.mjs
+          node --check personal/today-center-v15.js
+          node scripts/test-today-center-v15.mjs
           node --check api/personal-auth.js
           node --check api/health.js
           node --check api/personal-ops.js
@@ -77,6 +80,8 @@ jobs:
           test -f www-personal/plan-request-workflow-v12.js
           test -f www-personal/plan-history-v13.js
           test -f www-personal/exercise-picker-v14.css
+          test -f www-personal/today-center-v15.js
+          test -f www-personal/today-center-v15.css
           node --check www-personal/app-v2.js
           node --check www-personal/training-library-v2.js
           node --check www-personal/exercise-catalog-v4.js
@@ -86,12 +91,15 @@ jobs:
           node --check www-personal/exercise-gallery-v10.js
           node --check www-personal/visual-system-v11.js
           node --check www-personal/plan-history-v13.js
+          node --check www-personal/today-center-v15.js
           grep -q "safety-v9.js" www-personal/index.html
           grep -q "exercise-gallery-v10.js" www-personal/index.html
           grep -q "visual-system-v11.js" www-personal/index.html
           grep -q "plan-request-workflow-v12.js" www-personal/index.html
           grep -q "plan-history-v13.js" www-personal/index.html
           grep -q "exercise-picker-v14.css" www-personal/index.html
+          grep -q "today-center-v15.js" www-personal/index.html
+          grep -q "today-center-v15.css" www-personal/index.html
       - name: Use Vaz Personal Capacitor config
         run: cp capacitor.personal.config.json capacitor.config.json
       - name: Create Android project

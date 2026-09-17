@@ -69,7 +69,8 @@ function cycleInfo(row={}){
 }
 function billingInfo(row={}){
   const due=row.next_due_date?String(row.next_due_date).slice(0,10):null;const pending=!!row.force_pending||(due&&due<=todayISO());
-  return {configured:!!due,amount:row.monthly_amount==null?null:Number(row.monthly_amount),billingDay:row.billing_day||null,nextDueDate:due,forcePending:!!row.force_pending,status:!due?'not_configured':pending?'pending':'current'};
+  const daysLeft=due?Math.ceil((new Date(`${due}T12:00:00Z`).getTime()-new Date(`${todayISO()}T12:00:00Z`).getTime())/86400000):null;
+  return {configured:!!due,amount:row.monthly_amount==null?null:Number(row.monthly_amount),billingDay:row.billing_day||null,nextDueDate:due,daysLeft,forcePending:!!row.force_pending,status:!due?'not_configured':pending?'pending':'current'};
 }
 function applyRestDays(plan,restDays=[]){
   const blocked=[...new Set((restDays||[]).map(Number).filter(d=>Number.isInteger(d)&&d>=0&&d<=6))].slice(0,5);
@@ -109,11 +110,18 @@ export default async function handler(req,res){
         WHERE a.personal_id=${user.id} AND a.athlete_id<>a.personal_id ORDER BY u.name`;
       const clients=rows.map(r=>({id:r.id,name:r.name,publicCode:r.public_code,accessStatus:r.status,planVersion:Number(r.plan_version)||0,cycle:cycleInfo(r),billing:billingInfo(r)}));
       const requests=await sql`SELECT r.id,r.athlete_id,r.reason,r.rest_days,r.status,r.current_plan_version,r.created_at,u.name,u.public_code FROM vf_plan_change_requests r JOIN vf_users u ON u.id=r.athlete_id WHERE r.personal_id=${user.id} AND r.status IN ('pending','reviewing') ORDER BY r.created_at ASC`;
-      const alerts=[];for(const c of clients){if(c.cycle.status==='expired')alerts.push({kind:'cycle',severity:'danger',athleteId:c.id,name:c.name,message:'Treino vencido — precisa de novo ciclo.'});else if(c.cycle.status==='due_soon')alerts.push({kind:'cycle',severity:'warning',athleteId:c.id,name:c.name,message:`Treino vence em ${Math.max(0,c.cycle.daysLeft)} dia(s).`});if(c.billing.status==='pending')alerts.push({kind:'billing',severity:'danger',athleteId:c.id,name:c.name,message:`Mensalidade pendente${c.billing.nextDueDate?` desde ${c.billing.nextDueDate}`:''}.`})}
-      requests.forEach(r=>alerts.unshift({kind:'request',severity:'warning',athleteId:r.athlete_id,name:r.name,message:`Solicitou um novo treino: ${clean(r.reason,120)}`,requestId:r.id}));
+      const alerts=[];for(const c of clients){
+        if(c.accessStatus==='pending')alerts.push({kind:'approval',severity:'warning',priority:90,athleteId:c.id,name:c.name,message:'Cadastro aguardando revisão e liberação.',actionTab:'access'});
+        if(c.cycle.status==='expired')alerts.push({kind:'cycle',severity:'danger',priority:100,athleteId:c.id,name:c.name,message:'Treino vencido — precisa de novo ciclo.',dueAt:c.cycle.endsAt,actionTab:'management'});
+        else if(c.cycle.status==='due_soon')alerts.push({kind:'cycle',severity:'warning',priority:60,athleteId:c.id,name:c.name,message:`Treino vence em ${Math.max(0,c.cycle.daysLeft)} dia(s).`,dueAt:c.cycle.endsAt,actionTab:'management'});
+        if(c.billing.status==='pending')alerts.push({kind:'billing',severity:'danger',priority:80,athleteId:c.id,name:c.name,message:`Mensalidade pendente${c.billing.nextDueDate?` desde ${c.billing.nextDueDate}`:''}.`,dueAt:c.billing.nextDueDate,amount:c.billing.amount,actionTab:'management'});
+        else if(c.billing.status==='current'&&c.billing.daysLeft!=null&&c.billing.daysLeft<=7)alerts.push({kind:'billing',severity:'warning',priority:50,athleteId:c.id,name:c.name,message:c.billing.daysLeft===0?'Mensalidade vence hoje.':`Mensalidade vence em ${c.billing.daysLeft} dia(s).`,dueAt:c.billing.nextDueDate,amount:c.billing.amount,actionTab:'management'});
+      }
+      requests.forEach(r=>alerts.push({kind:'request',severity:'warning',priority:r.status==='pending'?95:85,athleteId:r.athlete_id,name:r.name,message:`${r.status==='reviewing'?'Treino em preparação':'Solicitou um novo treino'}: ${clean(r.reason,120)}`,requestId:r.id,requestStatus:r.status,createdAt:r.created_at,actionTab:'management'}));
+      alerts.sort((a,b)=>(Number(b.priority)||0)-(Number(a.priority)||0)||String(a.dueAt||a.createdAt||'').localeCompare(String(b.dueAt||b.createdAt||'')));
       const currentRevenue=clients.filter(c=>c.billing.configured&&c.billing.status==='current').reduce((sum,c)=>sum+(Number(c.billing.amount)||0),0);
       const pendingRevenue=clients.filter(c=>c.billing.status==='pending').reduce((sum,c)=>sum+(Number(c.billing.amount)||0),0);
-      return res.status(200).json({ok:true,clients,alerts,requests,finance:{currentRevenue,pendingRevenue,configured:clients.filter(c=>c.billing.configured).length,overdue:clients.filter(c=>c.billing.status==='pending').length},counts:{cycleReview:clients.filter(c=>['expired','due_soon'].includes(c.cycle.status)).length,billingPending:clients.filter(c=>c.billing.status==='pending').length,planRequests:requests.length}});
+      return res.status(200).json({ok:true,clients,alerts,requests,finance:{currentRevenue,pendingRevenue,configured:clients.filter(c=>c.billing.configured).length,overdue:clients.filter(c=>c.billing.status==='pending').length},counts:{cycleReview:clients.filter(c=>['expired','due_soon'].includes(c.cycle.status)).length,billingPending:clients.filter(c=>c.billing.status==='pending').length,billingUpcoming:clients.filter(c=>c.billing.status==='current'&&c.billing.daysLeft!=null&&c.billing.daysLeft<=7).length,planRequests:requests.length,accessPending:clients.filter(c=>c.accessStatus==='pending').length,urgent:alerts.filter(a=>a.severity==='danger').length,totalActions:alerts.length}});
     }
     if(req.method==='GET'&&action==='client'){
       await ensureAdvancedTables(sql);

@@ -37,5 +37,5 @@ test('recursos da busca entram no site, cache e pacote Android',()=>{
   const build=source('scripts/build-personal-native-v2.mjs');
   for(const content of [html,publicHtml,sw,build])assert.match(content,/exercise-picker-v14\.css/);
   assert.match(publicHtml,/plan-history-v13\.js/);
-  assert.match(source('personal/version.json'),/"version": "0\.5\.5"/);
+  assert.ok(Number(JSON.parse(source('personal/version.json')).versionCode)>=55);
 });
