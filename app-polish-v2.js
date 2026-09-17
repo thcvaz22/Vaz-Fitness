@@ -52,7 +52,7 @@
     if(!window.__VAZ_AUTH_ENTRY_V8__&&!localStorage.getItem('vazFitness.authToken')){
       document.body.classList.add('vf-account-gated');
       const view=document.getElementById('view');
-      if(view)view.innerHTML='<section class="vf-account-gate"><div class="vf-spinner"></div><h2>Preparando seu acesso…</h2><p>Abrindo a tela de login do Vaz Fitness.</p></div></section>';
+      if(view)view.innerHTML='<section class="vf-account-gate"><div class="vf-gate-card checking"><div class="vf-spinner"></div><h2>Preparando seu acesso…</h2><p>Abrindo a tela de login do Vaz Fitness.</p></div></section>';
       return;
     }
     priorRender();queueMicrotask(()=>{fixEmptyConsistency();applyCalendarFilter();});
