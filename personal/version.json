@@ -1,6 +1,6 @@
 {
-  "version": "0.5.1",
-  "versionCode": 51,
-  "notes": "Fluxo seguro de novo treino, sincronização automática com Vaz Fitness, respeito aos dias de descanso e liberação de ciclo protegida contra falhas de salvamento.",
+  "version": "0.5.2",
+  "versionCode": 52,
+  "notes": "Nova identidade visual com galeria de ícones e prévia de cores, atalhos simplificados, configurações mais limpas, central financeira de mensalidades e sincronização visual com o Vaz Fitness.",
   "downloadUrl": "https://github.com/thcvaz22/Vaz-Fitness/releases/download/vaz-apps-latest/Vaz-Personal.apk"
 }
