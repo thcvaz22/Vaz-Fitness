@@ -11,6 +11,8 @@
   if(original2)original2.dataset.step='3';
   if(original3)original3.dataset.step='4';
   if(original4)original4.dataset.step='5';
+  const restDays=Array.isArray(state.profile.restDays)?state.profile.restDays.map(Number):[];
+  if(original4)original4.insertAdjacentHTML('beforeend',`<fieldset class="rest-day-field"><legend>Dias que você quer descansar</legend><p class="step-helper">A AION não colocará treinos nesses dias.</p><div class="rest-day-options">${[['0','Dom'],['1','Seg'],['2','Ter'],['3','Qua'],['4','Qui'],['5','Sex'],['6','Sáb']].map(([v,l])=>`<label><input type="checkbox" name="restDays" value="${v}" ${restDays.includes(Number(v))?'checked':''}><span>${l}</span></label>`).join('')}</div></fieldset>`);
 
   const physical=document.createElement('div');
   physical.className='step';
@@ -51,7 +53,7 @@
   }
 
   const style=document.createElement('style');
-  style.textContent=`.step-helper{color:var(--muted);margin:-8px 0 18px;line-height:1.5}.physical-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}.physical-summary>div{background:#fafafa;border:1px solid var(--line);border-radius:16px;padding:13px}.physical-summary span{display:block;color:var(--muted);font-size:10px}.physical-summary strong{font-size:15px}@media(max-width:560px){.physical-summary{grid-template-columns:1fr 1fr}}`;
+  style.textContent=`.step-helper{color:var(--muted);margin:-8px 0 18px;line-height:1.5}.physical-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}.physical-summary>div{background:#fafafa;border:1px solid var(--line);border-radius:16px;padding:13px}.physical-summary span{display:block;color:var(--muted);font-size:10px}.physical-summary strong{font-size:15px}.rest-day-field{border:1px solid var(--line);border-radius:18px;padding:14px;margin-top:16px}.rest-day-field legend{font-weight:850;padding:0 6px}.rest-day-field .step-helper{margin:2px 0 10px}.rest-day-options{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.rest-day-options label{margin:0}.rest-day-options input{position:absolute;opacity:0}.rest-day-options span{display:grid;place-items:center;padding:9px 3px;border:1px solid var(--line);border-radius:12px;font-size:10px;font-weight:850}.rest-day-options input:checked+span{background:#191919;color:#fff;border-color:#191919}@media(max-width:560px){.physical-summary{grid-template-columns:1fr 1fr}.rest-day-options{grid-template-columns:repeat(4,1fr)}}`;
   document.head.appendChild(style);
 
   showStep=function(){
@@ -76,7 +78,7 @@
     state.profile={...state.profile,
       name,age,weight,height,sex:fd.get('sex')||'prefer_not',profileVersion:2,
       mode:fd.get('mode'),goal:fd.get('goal'),level:fd.get('level'),priorityMuscle:fd.get('priorityMuscle'),
-      days:+fd.get('days'),minutes:+fd.get('minutes'),location:fd.get('location'),runLevel:fd.get('runLevel'),easyPace:fd.get('easyPace')||'5:30'
+      days:+fd.get('days'),minutes:+fd.get('minutes'),location:fd.get('location'),runLevel:fd.get('runLevel'),easyPace:fd.get('easyPace')||'5:30',restDays:fd.getAll('restDays').map(Number).slice(0,5)
     };
     state.onboarded=true;generatePlan();save();document.getElementById('onboardingDialog').close();render();toast('Plano personalizado gerado!');
   };

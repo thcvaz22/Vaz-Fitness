@@ -20,6 +20,9 @@ const copies=[
   ['personal/plan-pricing-v6.js',`${out}/plan-pricing-v6.js`],
   ['personal/training-planner-v6.js',`${out}/training-planner-v6.js`],
   ['personal/remap-v7.js',`${out}/remap-v7.js`],
+  ['personal/advanced-v8.js',`${out}/advanced-v8.js`],
+  ['personal/version.json',`${out}/version.json`],
+  ['personal/sw.js',`${out}/sw.js`],
   ['personal/manifest.webmanifest',`${out}/manifest.webmanifest`],
   ['personal/icon.svg',`${out}/icon.svg`]
 ];

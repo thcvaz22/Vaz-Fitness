@@ -73,7 +73,8 @@
   function buildProposal(plan,skippedDate){
     const wk=weekKey(skippedDate),entries=baseWeekEntries(wk).filter(e=>!(e.date===skippedDate&&String(e.plan.basePlanId||e.plan.id)===String(plan.basePlanId||plan.id)));
     const today=key(new Date()),start=fromKey(wk),occupied=new Set(entries.map(e=>e.date));
-    const candidates=[];for(let i=0;i<7;i++){const d=addDays(start,i),dk=key(d);if(!inCycle(d)||dk<today||dk===skippedDate||occupied.has(dk))continue;candidates.push(dk)}
+    const restDays=new Set((state.profile?.restDays||[]).map(Number));
+    const candidates=[];for(let i=0;i<7;i++){const d=addDays(start,i),dk=key(d);if(!inCycle(d)||dk<today||dk===skippedDate||occupied.has(dk)||restDays.has(d.getDay()))continue;candidates.push(dk)}
     candidates.sort((a,b)=>{const aa=a>=skippedDate?0:1,bb=b>=skippedDate?0:1;return aa-bb||a.localeCompare(b)});
     const trainingDates=entries.map(e=>e.date);
     const free=candidates.find(d=>maxConsecutive([...trainingDates,d])<=3);

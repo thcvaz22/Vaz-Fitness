@@ -1,6 +1,6 @@
 {
   "name": "vaz-fitness",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "description": "Vaz Fitness — treino adaptativo com AION IA",
@@ -17,6 +17,7 @@
     "@capacitor/browser": "8.0.3",
     "@capacitor/core": "8.5.2",
     "@capacitor/ios": "8.5.2",
+    "@capacitor/local-notifications": "8.3.1",
     "@google/genai": "2.22.0",
     "@neondatabase/serverless": "1.1.0"
   },

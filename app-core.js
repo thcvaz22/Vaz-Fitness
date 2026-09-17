@@ -106,7 +106,10 @@ function generatePlan(){
   const base=splits[days];
   const today=new Date().getDay();
   const preferred=[1,2,3,4,5,6,0];
-  const start=preferred.indexOf(today)>=0?preferred.indexOf(today):0;
+  const restDays=[...new Set((state.profile.restDays||[]).map(Number).filter(d=>Number.isInteger(d)&&d>=0&&d<=6))].slice(0,5);
+  const availableDays=preferred.filter(d=>!restDays.includes(d));
+  const trainingDays=availableDays.length>=2?availableDays:preferred;
+  const start=trainingDays.indexOf(today)>=0?trainingDays.indexOf(today):0;
   const scheduled=[];
   const limit=getExerciseLimit();
   for(let i=0;i<days;i++){
@@ -115,7 +118,7 @@ function generatePlan(){
     const pri=exerciseLibrary.find(x=>x.muscle===state.profile.priorityMuscle && !ids.includes(x.id));
     if(pri && limit>ex.length) ex.push(cloneExercise(pri.id));
     ex=ex.slice(0,limit).map(e=>priorityRelated(e)?{...e,sets:e.sets+1,priority:true}:e);
-    scheduled.push({id:`s-${Date.now()}-${i}`,type:'strength',name,day:preferred[(start+i*2)%7],duration:+state.profile.minutes,exercises:ex,status:'pending'});
+    scheduled.push({id:`s-${Date.now()}-${i}`,type:'strength',name,day:trainingDays[(start+i)%trainingDays.length],duration:+state.profile.minutes,exercises:ex,status:'pending'});
   }
   if(state.profile.mode!=='strength'){
     const runCount=state.profile.mode==='run'?Math.max(3,Math.min(5,days)):Math.min(2,Math.max(1,7-days));
@@ -124,7 +127,8 @@ function generatePlan(){
       : [['Rodagem leve',35,'Leve'],['Intervalado',45,'Forte'],['Longão',60,'Moderado'],['Tempo run',40,'Moderado']];
     for(let i=0;i<runCount;i++){
       const r=runTypes[i%runTypes.length];
-      scheduled.push({id:`r-${Date.now()}-${i}`,type:'run',name:r[0],day:preferred[(start+i*3+1)%7],duration:r[1],intensity:r[2],pace:suggestRunPace(r[2]),status:'pending'});
+      const runOffset=state.profile.mode==='run'?i:i+days;
+      scheduled.push({id:`r-${Date.now()}-${i}`,type:'run',name:r[0],day:trainingDays[(start+runOffset)%trainingDays.length],duration:r[1],intensity:r[2],pace:suggestRunPace(r[2]),status:'pending'});
     }
   }
   state.plan=scheduled.sort((a,b)=>orderFromToday(a.day)-orderFromToday(b.day));

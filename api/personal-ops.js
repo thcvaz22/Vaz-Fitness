@@ -33,6 +33,20 @@ async function linked(sql,personalId,athleteId){
   return rows[0]||null;
 }
 async function audit(sql,actorId,athleteId,action,payload={}){try{await sql`INSERT INTO vf_audit_log (actor_id,athlete_id,action,payload) VALUES (${actorId},${athleteId},${action},CAST(${JSON.stringify(payload)} AS jsonb))`}catch{}}
+async function ensureAdvancedTables(sql){
+  await sql`CREATE TABLE IF NOT EXISTS vf_plan_change_requests (
+    id text PRIMARY KEY,athlete_id text NOT NULL,personal_id text,reason text NOT NULL,
+    rest_days jsonb NOT NULL DEFAULT '[]'::jsonb,status text NOT NULL DEFAULT 'pending',
+    current_plan_version integer NOT NULL DEFAULT 0,created_at timestamptz NOT NULL DEFAULT now(),
+    reviewed_at timestamptz,completed_at timestamptz
+  )`;
+  await sql`CREATE INDEX IF NOT EXISTS vf_plan_change_requests_personal_status_idx ON vf_plan_change_requests(personal_id,status,created_at DESC)`;
+  await sql`CREATE TABLE IF NOT EXISTS vf_plan_history (
+    id text PRIMARY KEY,athlete_id text NOT NULL,personal_id text,plan jsonb NOT NULL,notes text,
+    plan_version integer NOT NULL DEFAULT 0,source text NOT NULL DEFAULT 'manual',created_at timestamptz NOT NULL DEFAULT now()
+  )`;
+  await sql`CREATE INDEX IF NOT EXISTS vf_plan_history_athlete_idx ON vf_plan_history(athlete_id,created_at DESC)`;
+}
 async function personalAionQuota(sql,personalId){
   const rpm=envInt('AION_PERSONAL_RPM',DEFAULT_PERSONAL_RPM,1,30),rpd=envInt('AION_PERSONAL_RPD',DEFAULT_PERSONAL_RPD,5,500);
   const rows=await sql`SELECT
@@ -50,6 +64,11 @@ function cycleInfo(row={}){
 function billingInfo(row={}){
   const due=row.next_due_date?String(row.next_due_date).slice(0,10):null;const pending=!!row.force_pending||(due&&due<=todayISO());
   return {configured:!!due,amount:row.monthly_amount==null?null:Number(row.monthly_amount),billingDay:row.billing_day||null,nextDueDate:due,forcePending:!!row.force_pending,status:!due?'not_configured':pending?'pending':'current'};
+}
+function applyRestDays(plan,restDays=[]){
+  const blocked=[...new Set((restDays||[]).map(Number).filter(d=>Number.isInteger(d)&&d>=0&&d<=6))].slice(0,5);
+  const available=[1,2,3,4,5,6,0].filter(d=>!blocked.includes(d));if(!available.length)return plan;
+  return plan.map((day,index)=>blocked.includes(Number(day.day))?{...day,day:available[index%available.length]}:day);
 }
 const planSchema={
   type:'object',properties:{
@@ -73,20 +92,56 @@ export default async function handler(req,res){
   const {sql,user}=auth;const action=String(req.query?.action||req.body?.action||'').trim();
   try{
     if(req.method==='GET'&&action==='summary'){
+      await ensureAdvancedTables(sql);
       const rows=await sql`SELECT u.id,u.name,u.public_code,a.status,p.plan_version,p.cycle_days,p.cycle_started_at,p.cycle_ends_at,b.monthly_amount,b.billing_day,b.next_due_date,b.force_pending
         FROM vf_athlete_access a JOIN vf_users u ON u.id=a.athlete_id
         LEFT JOIN vf_training_plans p ON p.athlete_id=u.id LEFT JOIN vf_billing_accounts b ON b.athlete_id=u.id
         WHERE a.personal_id=${user.id} ORDER BY u.name`;
       const clients=rows.map(r=>({id:r.id,name:r.name,publicCode:r.public_code,accessStatus:r.status,planVersion:Number(r.plan_version)||0,cycle:cycleInfo(r),billing:billingInfo(r)}));
+      const requests=await sql`SELECT r.id,r.athlete_id,r.reason,r.rest_days,r.status,r.current_plan_version,r.created_at,u.name,u.public_code FROM vf_plan_change_requests r JOIN vf_users u ON u.id=r.athlete_id WHERE r.personal_id=${user.id} AND r.status IN ('pending','reviewing') ORDER BY r.created_at ASC`;
       const alerts=[];for(const c of clients){if(c.cycle.status==='expired')alerts.push({kind:'cycle',severity:'danger',athleteId:c.id,name:c.name,message:'Treino vencido — precisa de novo ciclo.'});else if(c.cycle.status==='due_soon')alerts.push({kind:'cycle',severity:'warning',athleteId:c.id,name:c.name,message:`Treino vence em ${Math.max(0,c.cycle.daysLeft)} dia(s).`});if(c.billing.status==='pending')alerts.push({kind:'billing',severity:'danger',athleteId:c.id,name:c.name,message:`Mensalidade pendente${c.billing.nextDueDate?` desde ${c.billing.nextDueDate}`:''}.`})}
-      return res.status(200).json({ok:true,clients,alerts,counts:{cycleReview:clients.filter(c=>['expired','due_soon'].includes(c.cycle.status)).length,billingPending:clients.filter(c=>c.billing.status==='pending').length}});
+      requests.forEach(r=>alerts.unshift({kind:'request',severity:'warning',athleteId:r.athlete_id,name:r.name,message:`Solicitou um novo treino: ${clean(r.reason,120)}`,requestId:r.id}));
+      const currentRevenue=clients.filter(c=>c.billing.configured&&c.billing.status==='current').reduce((sum,c)=>sum+(Number(c.billing.amount)||0),0);
+      const pendingRevenue=clients.filter(c=>c.billing.status==='pending').reduce((sum,c)=>sum+(Number(c.billing.amount)||0),0);
+      return res.status(200).json({ok:true,clients,alerts,requests,finance:{currentRevenue,pendingRevenue,configured:clients.filter(c=>c.billing.configured).length,overdue:clients.filter(c=>c.billing.status==='pending').length},counts:{cycleReview:clients.filter(c=>['expired','due_soon'].includes(c.cycle.status)).length,billingPending:clients.filter(c=>c.billing.status==='pending').length,planRequests:requests.length}});
     }
     if(req.method==='GET'&&action==='client'){
+      await ensureAdvancedTables(sql);
       const athleteId=clean(req.query?.athleteId,120);const client=await linked(sql,user.id,athleteId);if(!client)return sendError(res,404,'Aluno não encontrado.','not_found');
       const plans=await sql`SELECT plan_version,cycle_days,cycle_started_at,cycle_ends_at FROM vf_training_plans WHERE athlete_id=${athleteId} LIMIT 1`;
       const bills=await sql`SELECT monthly_amount,billing_day,next_due_date,force_pending,notes FROM vf_billing_accounts WHERE athlete_id=${athleteId} LIMIT 1`;
       const history=await sql`SELECT id,due_date,amount,status,paid_at,notes FROM vf_payment_history WHERE athlete_id=${athleteId} ORDER BY due_date DESC LIMIT 12`;
-      return res.status(200).json({ok:true,cycle:cycleInfo(plans[0]||{}),billing:billingInfo(bills[0]||{}),billingNotes:bills[0]?.notes||'',payments:history});
+      const requests=await sql`SELECT id,reason,rest_days,status,current_plan_version,created_at,reviewed_at,completed_at FROM vf_plan_change_requests WHERE athlete_id=${athleteId} AND personal_id=${user.id} ORDER BY created_at DESC LIMIT 5`;
+      return res.status(200).json({ok:true,cycle:cycleInfo(plans[0]||{}),billing:billingInfo(bills[0]||{}),billingNotes:bills[0]?.notes||'',payments:history,requests});
+    }
+    if(req.method==='GET'&&action==='plan_history'){
+      await ensureAdvancedTables(sql);const athleteId=clean(req.query?.athleteId,120);const client=await linked(sql,user.id,athleteId);if(!client)return sendError(res,404,'Aluno não encontrado.','not_found');
+      const rows=await sql`SELECT id,plan,notes,plan_version,source,created_at FROM vf_plan_history WHERE athlete_id=${athleteId} AND personal_id=${user.id} ORDER BY created_at DESC LIMIT 20`;
+      return res.status(200).json({ok:true,history:rows.map(r=>({...r,days:Array.isArray(r.plan)?r.plan.length:0}))});
+    }
+    if(req.method==='POST'&&action==='restore_plan'){
+      await ensureAdvancedTables(sql);const athleteId=clean(req.body?.athleteId,120),historyId=clean(req.body?.historyId,160);const client=await linked(sql,user.id,athleteId);if(!client)return sendError(res,404,'Aluno não encontrado.','not_found');
+      const target=await sql`SELECT plan,notes,plan_version FROM vf_plan_history WHERE id=${historyId} AND athlete_id=${athleteId} AND personal_id=${user.id} LIMIT 1`;if(!target.length)return sendError(res,404,'Versão do plano não encontrada.','history_not_found');
+      const current=await sql`SELECT plan,notes,plan_version FROM vf_training_plans WHERE athlete_id=${athleteId} LIMIT 1`;
+      if(Array.isArray(current[0]?.plan)&&current[0].plan.length)await sql`INSERT INTO vf_plan_history (id,athlete_id,personal_id,plan,notes,plan_version,source) VALUES (${`history_${crypto.randomUUID()}`},${athleteId},${user.id},CAST(${JSON.stringify(current[0].plan)} AS jsonb),${current[0].notes||null},${Number(current[0].plan_version)||0},'before_restore')`;
+      const rows=await sql`UPDATE vf_training_plans SET plan=CAST(${JSON.stringify(target[0].plan)} AS jsonb),notes=${target[0].notes||null},plan_version=plan_version+1,updated_at=now() WHERE athlete_id=${athleteId} RETURNING plan_version,updated_at`;
+      await audit(sql,user.id,athleteId,'plan_restored',{historyId,restoredFromVersion:Number(target[0].plan_version)||0,newVersion:Number(rows[0]?.plan_version)||0});
+      return res.status(200).json({ok:true,plan:target[0].plan,notes:target[0].notes||'',...rows[0]});
+    }
+    if(req.method==='POST'&&action==='review_request'){
+      await ensureAdvancedTables(sql);const requestId=clean(req.body?.requestId,160),status=String(req.body?.status||'reviewing');if(!['reviewing','rejected','completed'].includes(status))return sendError(res,400,'Status inválido.','invalid_status');
+      const rows=await sql`UPDATE vf_plan_change_requests SET status=${status},reviewed_at=COALESCE(reviewed_at,now()),completed_at=CASE WHEN ${status}='completed' THEN now() ELSE completed_at END WHERE id=${requestId} AND personal_id=${user.id} RETURNING athlete_id,reason,rest_days`;
+      if(!rows.length)return sendError(res,404,'Solicitação não encontrada.','request_not_found');
+      await sql`UPDATE vf_cloud_state SET state=CASE WHEN state ? 'planChangeRequest' THEN jsonb_set(state,'{planChangeRequest,status}',CAST(${JSON.stringify(status)} AS jsonb),true) ELSE state END,state_version=state_version+1,updated_at=now() WHERE user_id=${rows[0].athlete_id}`;
+      await audit(sql,user.id,rows[0].athlete_id,`plan_request_${status}`,{requestId});return res.status(200).json({ok:true,request:rows[0]});
+    }
+    if(req.method==='GET'&&action==='backup'){
+      await ensureAdvancedTables(sql);
+      const athletes=await sql`SELECT u.id,u.public_code,u.name,u.email,a.status,a.updated_at,c.state,c.state_version,p.plan,p.plan_version,p.notes,p.cycle_days,p.cycle_started_at,p.cycle_ends_at,b.monthly_amount,b.billing_day,b.next_due_date,b.force_pending FROM vf_athlete_access a JOIN vf_users u ON u.id=a.athlete_id LEFT JOIN vf_cloud_state c ON c.user_id=u.id LEFT JOIN vf_training_plans p ON p.athlete_id=u.id LEFT JOIN vf_billing_accounts b ON b.athlete_id=u.id WHERE a.personal_id=${user.id} ORDER BY u.name`;
+      const payments=await sql`SELECT athlete_id,due_date,amount,status,paid_at,notes FROM vf_payment_history WHERE personal_id=${user.id} ORDER BY due_date DESC`;
+      const requests=await sql`SELECT id,athlete_id,reason,rest_days,status,current_plan_version,created_at,reviewed_at,completed_at FROM vf_plan_change_requests WHERE personal_id=${user.id} ORDER BY created_at DESC`;
+      const history=await sql`SELECT id,athlete_id,plan,notes,plan_version,source,created_at FROM vf_plan_history WHERE personal_id=${user.id} ORDER BY created_at DESC`;
+      await audit(sql,user.id,null,'personal_backup_exported',{athletes:athletes.length});return res.status(200).json({ok:true,exportedAt:new Date().toISOString(),personal:{id:user.id,name:user.name,publicCode:user.public_code},athletes,payments,requests,planHistory:history});
     }
     if(req.method==='POST'&&action==='cycle'){
       const athleteId=clean(req.body?.athleteId,120);const client=await linked(sql,user.id,athleteId);if(!client)return sendError(res,404,'Aluno não encontrado.','not_found');
@@ -128,13 +183,16 @@ export default async function handler(req,res){
       const stateRows=await sql`SELECT state FROM vf_cloud_state WHERE user_id=${athleteId} LIMIT 1`;const planRows=await sql`SELECT plan,plan_version,cycle_days FROM vf_training_plans WHERE athlete_id=${athleteId} LIMIT 1`;const state=stateRows[0]?.state||{},currentPlan=planRows[0]?.plan||[];
       const recentStrength=(state.sessions||[]).slice(-12),recentRuns=(state.runSessions||[]).slice(-12);
       const recentWorkoutFeedback=[...recentStrength,...recentRuns].map(s=>({date:s.date,name:s.name,feedback:s.sessionFeedback||null})).filter(x=>x.feedback).slice(-12);
-      const context={profile:state.profile||{},goals:state.goals||{},healthContext:state.profile?.healthContext||{},healthRecords:(state.healthRecords||[]).slice(-20),recentWorkoutFeedback,bodyMeasurements:(state.bodyMeasurements||[]).slice(-12),readiness:(state.readinessCheckins||[]).slice(-10),recentStrength,recentRuns,calendar:(state.calendarEvents||[]).slice(-60),currentPlan,cycleDays:Number(planRows[0]?.cycle_days)||30};
+      const requestRows=await sql`SELECT reason,rest_days,created_at FROM vf_plan_change_requests WHERE athlete_id=${athleteId} AND personal_id=${user.id} AND status IN ('pending','reviewing') ORDER BY created_at DESC LIMIT 1`;
+      const activeRequest=requestRows[0]||null;
+      const context={profile:state.profile||{},goals:state.goals||{},healthContext:state.profile?.healthContext||{},healthRecords:(state.healthRecords||[]).slice(-20),recentWorkoutFeedback,bodyMeasurements:(state.bodyMeasurements||[]).slice(-12),readiness:(state.readinessCheckins||[]).slice(-10),recentStrength,recentRuns,calendar:(state.calendarEvents||[]).slice(-60),currentPlan,cycleDays:Number(planRows[0]?.cycle_days)||30,planChangeRequest:activeRequest};
       const ai=new GoogleGenAI({apiKey:process.env.GEMINI_API_KEY});const response=await ai.models.generateContent({model:MODEL,contents:`DADOS DO ALUNO E PLANO ATUAL:\
 ${JSON.stringify(context,null,2)}\
 \
-Crie uma sugestão de próximo ciclo. Antes de escolher exercícios, verifique lesões, limitações, movimentos a evitar e feedbacks recentes. Preserve a quantidade de dias compatível com a disponibilidade do aluno. Para dias de musculação, inclua exercícios, séries, faixa de repetições e descanso. Para corrida, inclua duração, pace/intensidade quando houver base suficiente.`,config:{systemInstruction:planInstruction(),responseMimeType:'application/json',responseSchema:planSchema,maxOutputTokens:2600,temperature:0.3}});
+Crie uma sugestão de próximo ciclo. Antes de escolher exercícios, verifique lesões, limitações, movimentos a evitar, feedbacks recentes e o motivo da solicitação de mudança. Preserve a quantidade de dias compatível com a disponibilidade do aluno e nunca agende treino nos dias de descanso escolhidos em profile.restDays ou planChangeRequest.rest_days. Para dias de musculação, inclua exercícios, séries, faixa de repetições e descanso. Para corrida, inclua duração, pace/intensidade quando houver base suficiente.`,config:{systemInstruction:planInstruction(),responseMimeType:'application/json',responseSchema:planSchema,maxOutputTokens:2600,temperature:0.3}});
       let data;try{data=JSON.parse(response.text)}catch{return sendError(res,502,'AION retornou uma sugestão inválida. Tente novamente.','invalid_ai_output')}
       if(!Array.isArray(data.plan)||!data.plan.length)return sendError(res,502,'AION não conseguiu montar o plano agora.','empty_ai_plan');
+      const requestedRest=activeRequest?.rest_days||state.profile?.restDays||[];data.plan=applyRestDays(data.plan,requestedRest);
       await audit(sql,user.id,athleteId,'aion_plan_suggested',{days:data.plan.length,model:MODEL,healthRestrictions:Number(context.healthContext?.activeRestrictions?.length)||0,feedbacks:recentWorkoutFeedback.length});return res.status(200).json({ok:true,...data});
     }
     return sendError(res,404,'Rota não encontrada.','not_found');

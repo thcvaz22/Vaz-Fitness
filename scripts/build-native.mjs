@@ -4,10 +4,12 @@ import { build } from 'esbuild';
 
 // Keep the native package aligned with the same modular assets served by Vercel.
 // White-label build: include membership, approval gate, dynamic branding and scale safeguards.
-const files=['index.html','styles.css','native-safearea.css','app-core.js','app-pt-guides.js','app-ui.js','app-training.js','app-ai.js','app-running.js','app-profile-v2.js','app-onboarding-v3.js','app-calibration.js','app-calendar.js','app-integrations.js','app-workout-exit.js','app-training-details.js','app-coach-v2.js','app-running-plus.js','app-polish-v2.js','app-membership.js','app-auth-entry-v8.js','app-branding.js','app-custom-exercise-media.js','app-scale-v1.js','app-experience-v6.js','app-calendar-cycle-v7.js','app-ux-v9.js','manifest.webmanifest','icon.svg','sw.js'];
+const files=['index.html','styles.css','native-safearea.css','app-core.js','app-pt-guides.js','app-ui.js','app-training.js','app-ai.js','app-running.js','app-profile-v2.js','app-onboarding-v3.js','app-calibration.js','app-calendar.js','app-integrations.js','app-workout-exit.js','app-training-details.js','app-coach-v2.js','app-running-plus.js','app-polish-v2.js','app-membership.js','app-auth-entry-v8.js','app-branding.js','app-custom-exercise-media.js','app-scale-v1.js','app-experience-v6.js','app-calendar-cycle-v7.js','app-ux-v9.js','app-plan-request-v10.js','manifest.webmanifest','icon.svg','sw.js'];
 await rm('www',{recursive:true,force:true});
 await mkdir('www',{recursive:true});
+await mkdir('www/assets',{recursive:true});
 for(const file of files){if(existsSync(file))await copyFile(file,`www/${file}`);}
+if(existsSync('assets/body-measurement-guide-v2.png'))await copyFile('assets/body-measurement-guide-v2.png','www/assets/body-measurement-guide-v2.png');
 
 await build({entryPoints:['native-entry.js'],bundle:true,format:'iife',platform:'browser',target:['es2020'],outfile:'www/app-native-bundle.js',minify:false});
 

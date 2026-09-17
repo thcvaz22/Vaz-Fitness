@@ -135,7 +135,7 @@
       level:mode==='run'?runningLevel:strengthLevel,
       runLevel:legacyRunningLevel(runningLevel),
       priorityMuscle:fd.get('priorityMuscle')||state.profile.priorityMuscle||'shoulders',
-      days:+fd.get('days'),minutes:+fd.get('minutes'),location:fd.get('location'),easyPace:fd.get('easyPace')||state.profile.easyPace||'5:30'
+      days:+fd.get('days'),minutes:+fd.get('minutes'),location:fd.get('location'),easyPace:fd.get('easyPace')||state.profile.easyPace||'5:30',restDays:fd.getAll('restDays').map(Number).slice(0,5)
     };
     state.onboarded=true;generatePlan();save();document.getElementById('onboardingDialog').close();render();toast('Plano personalizado gerado!');
   };
@@ -191,8 +191,9 @@
       while(runs.length<count){
         const i=runs.length;
         const t=templates[i%templates.length];
+        const blocked=new Set((p.restDays||[]).map(Number)),allowed=preferred.filter(d=>!blocked.has(d));
         const used=new Set([...avoidDays,...runs.map(r=>r.day)]);
-        const day=preferred.find(d=>!used.has(d)) ?? preferred[i%preferred.length];
+        const day=allowed.find(d=>!used.has(d)) ?? allowed[i%allowed.length];
         runs.push({id:`r-v3-${Date.now()}-${i}`,type:'run',name:t[0],day,duration:t[1],intensity:t[2],pace:suggestRunPace(t[2]),status:'pending',level:runningLevel});
       }
       if(p.goal==='42k'&&runs.length){
