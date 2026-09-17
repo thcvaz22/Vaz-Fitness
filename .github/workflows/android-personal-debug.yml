@@ -6,7 +6,6 @@ on:
     branches: [main]
     paths:
       - 'personal/**'
-      - 'api/plan-draft.js'
       - 'api/personal-ops.js'
       - 'api/personal-auth.js'
       - 'api/health.js'
@@ -46,7 +45,6 @@ jobs:
           node --check personal/coach-tools-v4.js
           node --check personal/advanced-v8.js
           node --check personal/safety-v9.js
-          node --check api/plan-draft.js
           node --check api/personal-auth.js
           node --check api/health.js
           node --check api/personal-ops.js
