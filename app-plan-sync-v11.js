@@ -70,8 +70,13 @@
     if(!token())return;
     try{await api('cloud_state',{method:'POST',body:{state:safeCloudState()}})}catch(error){if(![401,423].includes(Number(error.status)))console.warn('Vaz Fitness: não foi possível sincronizar dias de descanso.',error)}
   }
+  function repairRequestSubmit(root=document){
+    root.querySelectorAll?.('.vf-request-dialog form button.btn.primary:not([type])').forEach(button=>button.setAttribute('type','submit'));
+  }
 
-  // Corrige o botão criado no v10: o seletor do submit depende do atributo explícito type="submit".
+  // Corrige o botão criado no v10 inclusive quando o envio acontece pelo teclado/Enter.
+  repairRequestSubmit();
+  new MutationObserver(mutations=>mutations.some(m=>m.addedNodes?.length)&&repairRequestSubmit()).observe(document.body,{childList:true,subtree:true});
   document.addEventListener('click',event=>{
     const button=event.target.closest?.('.vf-request-dialog form button.btn.primary');
     if(button&&!button.hasAttribute('type'))button.setAttribute('type','submit');
