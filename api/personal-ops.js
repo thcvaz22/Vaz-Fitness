@@ -11,6 +11,9 @@ const DEFAULT_PERSONAL_RPD=40;
 function db(){if(!process.env.DATABASE_URL)throw new Error('DATABASE_URL não configurada.');return neon(process.env.DATABASE_URL)}
 function tokenHash(token){return crypto.createHash('sha256').update(String(token)).digest('hex')}
 function clean(v='',max=160){return String(v??'').trim().slice(0,max)}
+function isObject(v){return v&&typeof v==='object'&&!Array.isArray(v)}
+function jsonSize(v){try{return Buffer.byteLength(JSON.stringify(v),'utf8')}catch{return Infinity}}
+function validPlan(plan){return Array.isArray(plan)&&plan.length>0&&plan.length<=21&&jsonSize(plan)<=500000&&plan.every(day=>isObject(day)&&['strength','run'].includes(day.type)&&clean(day.name,100).length>0&&Number.isFinite(Number(day.duration||0))&&Number(day.duration||0)>=0&&Number(day.duration||0)<=300&&(!day.exercises||Array.isArray(day.exercises))&&(!day.exercises||day.exercises.length<=30))}
 function sendError(res,status,message,code='error'){return res.status(status).json({ok:false,error:code,message})}
 function isoDate(v){const m=String(v||'').match(/^\d{4}-\d{2}-\d{2}$/);return m?m[0]:null}
 function money(v){if(v===''||v==null)return null;const n=Number(v);return Number.isFinite(n)&&n>=0&&n<=99999999?n:null}
@@ -40,6 +43,9 @@ async function ensureAdvancedTables(sql){
     current_plan_version integer NOT NULL DEFAULT 0,created_at timestamptz NOT NULL DEFAULT now(),
     reviewed_at timestamptz,completed_at timestamptz
   )`;
+  await sql`ALTER TABLE vf_plan_change_requests ADD COLUMN IF NOT EXISTS draft_plan jsonb`;
+  await sql`ALTER TABLE vf_plan_change_requests ADD COLUMN IF NOT EXISTS draft_notes text`;
+  await sql`ALTER TABLE vf_plan_change_requests ADD COLUMN IF NOT EXISTS draft_updated_at timestamptz`;
   await sql`CREATE INDEX IF NOT EXISTS vf_plan_change_requests_personal_status_idx ON vf_plan_change_requests(personal_id,status,created_at DESC)`;
   await sql`CREATE TABLE IF NOT EXISTS vf_plan_history (
     id text PRIMARY KEY,athlete_id text NOT NULL,personal_id text,plan jsonb NOT NULL,notes text,
@@ -111,7 +117,7 @@ export default async function handler(req,res){
       const plans=await sql`SELECT plan_version,cycle_days,cycle_started_at,cycle_ends_at FROM vf_training_plans WHERE athlete_id=${athleteId} LIMIT 1`;
       const bills=await sql`SELECT monthly_amount,billing_day,next_due_date,force_pending,notes FROM vf_billing_accounts WHERE athlete_id=${athleteId} LIMIT 1`;
       const history=await sql`SELECT id,due_date,amount,status,paid_at,notes FROM vf_payment_history WHERE athlete_id=${athleteId} ORDER BY due_date DESC LIMIT 12`;
-      const requests=await sql`SELECT id,reason,rest_days,status,current_plan_version,created_at,reviewed_at,completed_at FROM vf_plan_change_requests WHERE athlete_id=${athleteId} AND personal_id=${user.id} ORDER BY created_at DESC LIMIT 5`;
+      const requests=await sql`SELECT id,reason,rest_days,status,current_plan_version,draft_plan,draft_notes,draft_updated_at,created_at,reviewed_at,completed_at FROM vf_plan_change_requests WHERE athlete_id=${athleteId} AND personal_id=${user.id} ORDER BY created_at DESC LIMIT 5`;
       return res.status(200).json({ok:true,cycle:cycleInfo(plans[0]||{}),billing:billingInfo(bills[0]||{}),billingNotes:bills[0]?.notes||'',payments:history,requests});
     }
     if(req.method==='GET'&&action==='plan_history'){
@@ -128,8 +134,18 @@ export default async function handler(req,res){
       await audit(sql,user.id,athleteId,'plan_restored',{historyId,restoredFromVersion:Number(target[0].plan_version)||0,newVersion:Number(rows[0]?.plan_version)||0});
       return res.status(200).json({ok:true,plan:target[0].plan,notes:target[0].notes||'',...rows[0]});
     }
+    if(req.method==='POST'&&action==='save_request_draft'){
+      await ensureAdvancedTables(sql);
+      const requestId=clean(req.body?.requestId,160),plan=req.body?.plan,notes=clean(req.body?.notes,1000);
+      if(!validPlan(plan))return sendError(res,400,'Rascunho de treino inválido.','invalid_plan');
+      const rows=await sql`UPDATE vf_plan_change_requests SET status='reviewing',draft_plan=CAST(${JSON.stringify(plan)} AS jsonb),draft_notes=${notes||null},draft_updated_at=now(),reviewed_at=COALESCE(reviewed_at,now()) WHERE id=${requestId} AND personal_id=${user.id} AND status IN ('pending','reviewing') RETURNING athlete_id,status,draft_updated_at`;
+      if(!rows.length)return sendError(res,404,'Solicitação ativa não encontrada.','request_not_found');
+      await sql`UPDATE vf_cloud_state SET state=CASE WHEN state ? 'planChangeRequest' THEN jsonb_set(state,'{planChangeRequest,status}','"reviewing"'::jsonb,true) ELSE state END,state_version=state_version+1,updated_at=now() WHERE user_id=${rows[0].athlete_id}`;
+      await audit(sql,user.id,rows[0].athlete_id,'plan_request_draft_saved',{requestId,days:plan.length});
+      return res.status(200).json({ok:true,request:{id:requestId,status:'reviewing',draftPlan:plan,draftNotes:notes,draftUpdatedAt:rows[0].draft_updated_at}});
+    }
     if(req.method==='POST'&&action==='review_request'){
-      await ensureAdvancedTables(sql);const requestId=clean(req.body?.requestId,160),status=String(req.body?.status||'reviewing');if(!['reviewing','rejected','completed'].includes(status))return sendError(res,400,'Status inválido.','invalid_status');
+      await ensureAdvancedTables(sql);const requestId=clean(req.body?.requestId,160),status=String(req.body?.status||'reviewing');if(!['reviewing','rejected'].includes(status))return sendError(res,400,'Status inválido.','invalid_status');
       const rows=await sql`UPDATE vf_plan_change_requests SET status=${status},reviewed_at=COALESCE(reviewed_at,now()),completed_at=CASE WHEN ${status}='completed' THEN now() ELSE completed_at END WHERE id=${requestId} AND personal_id=${user.id} RETURNING athlete_id,reason,rest_days`;
       if(!rows.length)return sendError(res,404,'Solicitação não encontrada.','request_not_found');
       await sql`UPDATE vf_cloud_state SET state=CASE WHEN state ? 'planChangeRequest' THEN jsonb_set(state,'{planChangeRequest,status}',CAST(${JSON.stringify(status)} AS jsonb),true) ELSE state END,state_version=state_version+1,updated_at=now() WHERE user_id=${rows[0].athlete_id}`;
@@ -139,7 +155,7 @@ export default async function handler(req,res){
       await ensureAdvancedTables(sql);
       const athletes=await sql`SELECT u.id,u.public_code,u.name,u.email,a.status,a.updated_at,c.state,c.state_version,p.plan,p.plan_version,p.notes,p.cycle_days,p.cycle_started_at,p.cycle_ends_at,b.monthly_amount,b.billing_day,b.next_due_date,b.force_pending FROM vf_athlete_access a JOIN vf_users u ON u.id=a.athlete_id LEFT JOIN vf_cloud_state c ON c.user_id=u.id LEFT JOIN vf_training_plans p ON p.athlete_id=u.id LEFT JOIN vf_billing_accounts b ON b.athlete_id=u.id WHERE a.personal_id=${user.id} ORDER BY u.name`;
       const payments=await sql`SELECT athlete_id,due_date,amount,status,paid_at,notes FROM vf_payment_history WHERE personal_id=${user.id} ORDER BY due_date DESC`;
-      const requests=await sql`SELECT id,athlete_id,reason,rest_days,status,current_plan_version,created_at,reviewed_at,completed_at FROM vf_plan_change_requests WHERE personal_id=${user.id} ORDER BY created_at DESC`;
+      const requests=await sql`SELECT id,athlete_id,reason,rest_days,status,current_plan_version,draft_plan,draft_notes,draft_updated_at,created_at,reviewed_at,completed_at FROM vf_plan_change_requests WHERE personal_id=${user.id} ORDER BY created_at DESC`;
       const history=await sql`SELECT id,athlete_id,plan,notes,plan_version,source,created_at FROM vf_plan_history WHERE personal_id=${user.id} ORDER BY created_at DESC`;
       await audit(sql,user.id,null,'personal_backup_exported',{athletes:athletes.length});return res.status(200).json({ok:true,exportedAt:new Date().toISOString(),personal:{id:user.id,name:user.name,publicCode:user.public_code},athletes,payments,requests,planHistory:history});
     }

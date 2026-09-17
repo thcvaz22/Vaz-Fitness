@@ -36,6 +36,7 @@ jobs:
           node --check app-polish-v2.js
           node --check app-plan-request-v10.js
           node --check app-plan-sync-v11.js
+          node --check api/vf.js
       - name: Prepare native web bundle
         run: npm run native:prepare
       - name: Validate packaged experience
