@@ -24,8 +24,8 @@ jobs:
   signed-release:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: 0.5.0
-      APP_VERSION_CODE: 50
+      APP_VERSION_NAME: 0.5.1
+      APP_VERSION_CODE: 51
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -50,7 +50,9 @@ jobs:
       - name: Validate source
         run: |
           node --check app-plan-request-v10.js
+          node --check app-plan-sync-v11.js
           node --check personal/advanced-v8.js
+          node --check personal/safety-v9.js
           node --check api/vf.js
           node --check api/personal-ops.js
           node --check lib/personal-tools-handler.js
@@ -87,7 +89,7 @@ jobs:
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Vaz-Apps-Android-Release-0.5.0
+          name: Vaz-Apps-Android-Release-0.5.1
           path: |
             Vaz-Personal.apk
             Vaz-Fitness.apk
@@ -96,5 +98,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view vaz-apps-latest >/dev/null 2>&1 || gh release create vaz-apps-latest --title "Vaz Apps Android 0.5.0" --notes "Versões oficiais assinadas do Vaz Fitness e Vaz Personal."
+          gh release view vaz-apps-latest >/dev/null 2>&1 || gh release create vaz-apps-latest --title "Vaz Apps Android 0.5.1" --notes "Versões oficiais assinadas do Vaz Fitness e Vaz Personal."
+          gh release edit vaz-apps-latest --title "Vaz Apps Android 0.5.1" --notes "Versões oficiais assinadas do Vaz Fitness e Vaz Personal."
           gh release upload vaz-apps-latest Vaz-Personal.apk Vaz-Fitness.apk --clobber
