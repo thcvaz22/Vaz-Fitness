@@ -49,4 +49,4 @@ for(const code of [visual,studentBrand]){
   assert.match(code,/alligator:[\s\S]*?stroke-width="1\.55"/,'Jacaré deve usar ícone refinado');
   assert.match(code,/flame:[\s\S]*?stroke-width="1\.6"/,'Fogo deve usar ícone refinado');
 }
-console.log('Pacote descanso/treino extra/guia/mobile: regressões cobertas.');
+console.log('Pacote 0.6.5 — descanso, treino extra, guia, mobile e modal de marca: regressões cobertas.');
