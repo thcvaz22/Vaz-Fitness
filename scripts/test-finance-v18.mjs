@@ -4,10 +4,10 @@ import {readFile} from 'node:fs/promises';
 
 const root=new URL('../',import.meta.url);
 const read=path=>readFile(new URL(path,root),'utf8');
-const [ui,css,api,index,indexV2,sw,build,versionText]=await Promise.all([
+const [ui,css,api,index,indexV2,sw,build,versionText,releaseText]=await Promise.all([
   read('personal/finance-v18.js'),read('personal/finance-v18.css'),read('api/personal-ops.js'),
   read('personal/index.html'),read('personal/index-v2.html'),read('personal/sw.js'),
-  read('scripts/build-personal-native-v2.mjs'),read('personal/version.json')
+  read('scripts/build-personal-native-v2.mjs'),read('personal/version.json'),read('release.json')
 ]);
 
 const context={
@@ -77,8 +77,8 @@ assert.doesNotMatch(css,/^\.vp-finance-metric-grid\{grid-template-columns:repeat
 assert.match(css,/overflow-wrap:anywhere/,'valores financeiros longos precisam continuar visíveis');
 assert.match(css,/@media\(max-width:680px\)\{\.vp-finance-metric-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,'cards financeiros devem usar duas colunas no celular');
 
-const version=JSON.parse(versionText);
-assert.equal(version.version,'0.6.1');
-assert.equal(version.versionCode,61);
+const version=JSON.parse(versionText),release=JSON.parse(releaseText);
+assert.equal(version.version,release.version);
+assert.equal(version.versionCode,release.versionCode);
 
 console.log('Mensalidades e financeiro v18: 48 verificações concluídas.');
