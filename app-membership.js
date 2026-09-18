@@ -45,8 +45,15 @@
   }
   function applyCloudState(remote){
     if(!remote||typeof remote!=='object')return;
+    const localProfile=state.profile&&typeof state.profile==='object'?state.profile:{};
+    const localRestAt=Number(localProfile.restDaysUpdatedAt)||0;
+    const localResetPending=!!state.weekOverridesResetPending;
     const preserve={chat:state.chat,plan:state.plan,cloudPlanVersion:state.cloudPlanVersion,cloudPlanUpdatedAt:state.cloudPlanUpdatedAt};
     const clean={...remote};delete clean.plan;delete clean.cloudPlanVersion;delete clean.cloudPlanUpdatedAt;delete clean.cloudStateVersion;delete clean.pendingExtraWorkout;
+    const remoteProfile=clean.profile&&typeof clean.profile==='object'?clean.profile:{};
+    const remoteRestAt=Number(remoteProfile.restDaysUpdatedAt)||0;
+    if(localRestAt>remoteRestAt)clean.profile={...remoteProfile,restDays:[...(Array.isArray(localProfile.restDays)?localProfile.restDays:[])],restDaysUpdatedAt:localRestAt};
+    if(localResetPending){clean.weekOverrides={};clean.remapRequests=[];clean.weekOverridesResetPending=true;}
     state={...state,...clean,...preserve,onboarded:true};
   }
   function mergeList(server=[],local=[],max=220){
