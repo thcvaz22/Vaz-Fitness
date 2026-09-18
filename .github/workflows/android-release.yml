@@ -57,6 +57,7 @@ jobs:
           node --check personal/finance-v18.js
           node scripts/test-finance-v18.mjs
           node --check personal/today-center-v15.js
+          node --check personal/aion-action-plan-v20.js
           node scripts/test-today-center-v15.mjs
           node --check personal/safety-v9.js
           node --check api/vf.js
