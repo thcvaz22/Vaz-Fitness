@@ -62,23 +62,31 @@
       input.checked=false;toast(`Com ${trainingDays()} dias de treino, escolha no máximo ${maxRestDays()} dia(s) de descanso.`);return;
     }
     state.profile.restDays=checked.map(x=>Number(x.value)).sort((a,b)=>a-b);
+    state.weekOverrides={};
+    state.weekOverridesResetPending=true;
     save();
     toast('Dias de descanso atualizados. Toque em “Remanejar treinos” para redistribuir o plano.');
   }
 
   async function remapWorkouts(){
     const rest=new Set(selectedRestDays()),allowed=[1,2,3,4,5,6,0].filter(d=>!rest.has(d));
-    const workouts=(state.plan||[]).filter(x=>x&&x.status==='pending'&&['strength','run'].includes(x.type));
+    const workouts=(state.plan||[]).filter(x=>x&&x.status!=='abandoned'&&['strength','run'].includes(x.type));
     if(!allowed.length)return toast('Selecione menos dias de descanso.');
-    if(!workouts.length)return toast('Não há treinos pendentes para remanejar.');
-    if(!confirm('Remanejar os dias dos treinos pendentes mantendo exatamente os mesmos exercícios e prescrições?'))return;
-    state.planDayOverrides=state.planDayOverrides&&typeof state.planDayOverrides==='object'?state.planDayOverrides:{};
+    if(!workouts.length)return toast('Não há treinos no plano para remanejar.');
+    if(!confirm('Remanejar os dias dos treinos mantendo exatamente os mesmos exercícios e prescrições?'))return;
+    state.planDayOverrides={};
+    state.weekOverrides={};
+    state.weekOverridesResetPending=true;
     workouts.forEach((item,index)=>{item.day=allowed[index%allowed.length];state.planDayOverrides[item.id]=item.day;delete item.scheduledDate});
     save();
     try{window.VazCalendar?.reconcile?.()}catch{}
+    try{
+      const reset=await fetch(`${window.VAZ_API_BASE||''}/api/health?scope=remap&action=reset_overrides`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${localStorage.getItem(TOKEN_KEY)||''}`},body:JSON.stringify({reason:'rest_days_changed'})});
+      if(reset.ok){state.weekOverridesResetPending=false;save();}
+    }catch{}
     try{await window.VazCloudSync?.syncNow?.()}catch{}
     render();
-    toast('Treinos remanejados. Exercícios e prescrições foram mantidos.');
+    toast('Treinos remanejados. Os descansos antigos foram substituídos pelos novos.');
   }
 
   function extraWorkoutOptions(){
