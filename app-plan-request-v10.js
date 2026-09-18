@@ -98,6 +98,15 @@
       d.querySelector('[data-remap-cancel]')?.addEventListener('click',()=>finish(false));
       d.querySelector('[data-remap-confirm]')?.addEventListener('click',()=>finish(true));
       document.body.appendChild(d);
+      const modalIcon=d.querySelector('.vf-brand-confirm-icon');
+      const brandBg=brand?getComputedStyle(brand).backgroundImage:'none';
+      if(modalIcon&&brandBg&&brandBg!=='none'){
+        modalIcon.innerHTML='';
+        modalIcon.style.backgroundImage=brandBg;
+        modalIcon.style.backgroundSize='contain';
+        modalIcon.style.backgroundRepeat='no-repeat';
+        modalIcon.style.backgroundPosition='center';
+      }
       d.showModal();
     });
   }
