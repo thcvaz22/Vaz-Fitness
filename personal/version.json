@@ -1,6 +1,6 @@
 {
-  "version": "0.6.2",
-  "versionCode": 62,
-  "notes": "Guia interativo de medidas, controle de conflito por versão, diagnóstico discreto e Central AION com sugestões e planos de ação.",
+  "version": "0.6.3",
+  "versionCode": 63,
+  "notes": "Dias de descanso movidos para Treinos com remanejamento sem alterar exercícios, treino extra em dias de descanso, guia corporal corrigido, perfil visível e refinamentos mobile/ícones no Vaz Personal.",
   "downloadUrl": "https://github.com/thcvaz22/Vaz-Fitness/releases/download/vaz-apps-latest/Vaz-Personal.apk"
 }
