@@ -1,8 +1,8 @@
 {
-  "version": "0.6.2",
-  "versionCode": 62,
+  "version": "0.6.3",
+  "versionCode": 63,
   "releasedAt": "2026-09-18",
-  "notes": "Guia interativo de medidas, controle de conflito por versão, diagnóstico discreto e Central AION com sugestões e planos de ação.",
+  "notes": "Dias de descanso movidos para Treinos com remanejamento sem alterar exercícios, treino extra em dias de descanso, guia corporal corrigido, perfil visível e refinamentos mobile/ícones no Vaz Personal.",
   "apps": {
     "fitness": {
       "appId": "com.vazfitness.app",
