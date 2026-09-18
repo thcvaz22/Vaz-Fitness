@@ -1,8 +1,8 @@
 {
-  "version": "0.6.3",
-  "versionCode": 63,
+  "version": "0.6.4",
+  "versionCode": 64,
   "releasedAt": "2026-09-18",
-  "notes": "Dias de descanso movidos para Treinos com remanejamento sem alterar exercícios, treino extra em dias de descanso, guia corporal corrigido, perfil visível e refinamentos mobile/ícones no Vaz Personal.",
+  "notes": "Correção do remanejamento de descanso: substitui dias antigos, invalida remanejamentos semanais obsoletos e o calendário só marca como Descanso os dias atualmente selecionados.",
   "apps": {
     "fitness": {
       "appId": "com.vazfitness.app",
