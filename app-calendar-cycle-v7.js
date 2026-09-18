@@ -63,7 +63,20 @@
   }
   async function syncConfig(force=false){
     if(configLoading||!localStorage.getItem(TOKEN_KEY)||(!force&&Date.now()-lastConfigAt<60000))return;
-    configLoading=true;try{const d=await remote('athlete_config');state.remapPolicy=d.policy||'ask';state.trainingCycle=d.cycle||state.trainingCycle||{days:30};state.weekOverrides=d.weekOverrides||{};state.remapRequests=d.requests||[];lastConfigAt=Date.now();save();if(activeView==='progress')render();}catch{}finally{configLoading=false}
+    configLoading=true;
+    try{
+      let acceptRemoteOverrides=true;
+      if(state.weekOverridesResetPending){
+        try{await remote('reset_overrides',{method:'POST',body:{reason:'rest_days_changed'}});state.weekOverridesResetPending=false;save();}
+        catch{acceptRemoteOverrides=false}
+      }
+      const d=await remote('athlete_config');
+      state.remapPolicy=d.policy||'ask';
+      state.trainingCycle=d.cycle||state.trainingCycle||{days:30};
+      state.weekOverrides=acceptRemoteOverrides?(d.weekOverrides||{}):{};
+      state.remapRequests=d.requests||[];
+      lastConfigAt=Date.now();save();if(activeView==='progress')render();
+    }catch{}finally{configLoading=false}
   }
 
   function maxConsecutive(dateKeys){
@@ -148,7 +161,8 @@
     for(let i=0;i<offset;i++)cells.push('<div class="cycle-day empty"></div>');
     for(let d=1;d<=count;d++){
       const dk=`${y}-${pad(m+1)}-${pad(d)}`,list=events.filter(e=>e.date===dk),tone=dayTone(list),inside=dk>=key(c.start)&&dk<=key(c.end),today=dk===key(new Date());
-      cells.push(`<button class="cycle-day ${tone?`tone-${tone}`:''} ${today?'today':''} ${inside?'in-cycle':'out-cycle'}" data-cycle-date="${dk}" ${!list.length?'aria-label="Sem treino neste dia"':''}><span class="cycle-number">${d}</span>${list.length?`<div class="cycle-marks">${list.slice(0,4).map(e=>`<span title="${safe(e.name)}">${shortLabel(e)}</span>`).join('')}</div><small>${list.length===1?safe(list[0].name):`${list.length} atividades`}</small>`:'<small class="rest-label">'+(inside?'Descanso':'')+'</small>'}</button>`);
+      const weekday=new Date(y,m,d,12).getDay(),restDay=inside&&(state.profile?.restDays||[]).map(Number).includes(weekday);
+      cells.push(`<button class="cycle-day ${tone?`tone-${tone}`:''} ${today?'today':''} ${inside?'in-cycle':'out-cycle'}" data-cycle-date="${dk}" ${!list.length?'aria-label="Sem treino neste dia"':''}><span class="cycle-number">${d}</span>${list.length?`<div class="cycle-marks">${list.slice(0,4).map(e=>`<span title="${safe(e.name)}">${shortLabel(e)}</span>`).join('')}</div><small>${list.length===1?safe(list[0].name):`${list.length} atividades`}</small>`:`<small class="rest-label">${inside?(restDay?'Descanso':'Sem treino'):''}</small>`}</button>`);
     }
     const title=cursor.toLocaleDateString('pt-BR',{month:'long',year:'numeric'}),daysLeft=Math.max(0,Math.ceil((c.end-new Date())/86400000));
     return `<section class="card monthly-calendar-card cycle-calendar-v7"><div class="calendar-head"><div><span class="eyebrow">CICLO DE ${c.days} DIAS</span><h2>${title.charAt(0).toUpperCase()+title.slice(1)}</h2><p>Todo o ciclo fica visível. Alterações por falta afetam somente a semana correspondente.</p></div><div class="calendar-nav"><button class="icon-btn" data-cycle-prev>‹</button><button class="calendar-today-btn" data-cycle-today>Hoje</button><button class="icon-btn" data-cycle-next>›</button></div></div><div class="cycle-summary"><span><b>${c.startedAt}</b> início</span><span><b>${c.endsAt}</b> fim</span><span><b>${daysLeft}</b> dias restantes</span><span><b>${state.remapPolicy==='auto'?'Automático':state.remapPolicy==='off'?'Desligado':'Com aprovação'}</b> remanejamento</span></div><div class="calendar-weekdays"><span>SEG</span><span>TER</span><span>QUA</span><span>QUI</span><span>SEX</span><span>SÁB</span><span>DOM</span></div><div class="calendar-grid cycle-grid">${cells.join('')}</div><div class="calendar-legend"><span><i class="done"></i>Concluído</span><span><i class="planned"></i>Planejado</span><span><i class="missed"></i>Falta</span><span><i class="additional"></i>Extra</span></div></section>`;
