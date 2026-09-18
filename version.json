@@ -1,6 +1,6 @@
 {
-  "version": "0.6.1",
-  "versionCode": 61,
-  "notes": "Biblioteca com cadastro de exercícios, cards financeiros responsivos e valores longos protegidos no Vaz Personal.",
+  "version": "0.6.2",
+  "versionCode": 62,
+  "notes": "Guia interativo de medidas, controle de conflito por versão, diagnóstico discreto e Central AION com sugestões e planos de ação.",
   "downloadUrl": "https://github.com/thcvaz22/Vaz-Fitness/releases/download/vaz-apps-latest/Vaz-Fitness.apk"
 }
