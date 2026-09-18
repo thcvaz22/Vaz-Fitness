@@ -9,7 +9,8 @@ await rm('www',{recursive:true,force:true});
 await mkdir('www',{recursive:true});
 await mkdir('www/assets',{recursive:true});
 for(const file of files){if(existsSync(file))await copyFile(file,`www/${file}`);}
-if(existsSync('assets/body-measurement-guide-v3.png'))await copyFile('assets/body-measurement-guide-v3.png','www/assets/body-measurement-guide-v3.png');
+if(existsSync('assets/body-measurement-guide-v4.svg'))await copyFile('assets/body-measurement-guide-v4.svg','www/assets/body-measurement-guide-v4.svg');
+if(existsSync('assets/body-measurement-guide-v2.png'))await copyFile('assets/body-measurement-guide-v2.png','www/assets/body-measurement-guide-v2.png');
 
 await build({entryPoints:['native-entry.js'],bundle:true,format:'iife',platform:'browser',target:['es2020'],outfile:'www/app-native-bundle.js',minify:false});
 
