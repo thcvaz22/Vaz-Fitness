@@ -66,10 +66,12 @@
     const session={
       id:Date.now(),date:new Date().toISOString(),name:item?.name||'Treino',duration,volume:Math.round(volume),exercises,
       muscleScore:partialMuscleScore(exercises),planId:c.planId,partial:true,completionPercent:progress.percent,
-      completedSeries:progress.done,plannedSeries:progress.planned,plannedExerciseCount:c.exercises.length
+      completedSeries:progress.done,plannedSeries:progress.planned,plannedExerciseCount:c.exercises.length,
+      extraWorkout:!!c.extraWorkout,executedOnRestDay:!!c.executedOnRestDay,
+      originalPlanDay:c.originalPlanDay??item?.day,originalPlanId:c.originalPlanId||item?.id
     };
     state.sessions.push(session);
-    if(item){item.status='done';item.partial=true;item.completionPercent=progress.percent;}
+    if(item&&!c.extraWorkout){item.status='done';item.partial=true;item.completionPercent=progress.percent;}
     state.current=null;
     state.score=Math.min(99,state.score+1);
     save();
@@ -77,7 +79,7 @@
     showSummary(session);
     const hero=document.querySelector('#summaryContent .summary-hero');
     if(hero){
-      const eyebrow=hero.querySelector('.eyebrow');if(eyebrow)eyebrow.textContent='TREINO FINALIZADO PARCIALMENTE';
+      const eyebrow=hero.querySelector('.eyebrow');if(eyebrow)eyebrow.textContent=session.extraWorkout?'TREINO EXTRA FINALIZADO PARCIALMENTE':'TREINO FINALIZADO PARCIALMENTE';
       hero.insertAdjacentHTML('afterend',`<div class="partial-summary-banner"><strong>${progress.percent}% concluído</strong><span>${progress.done} de ${progress.planned} séries registradas. O histórico considera somente o que foi realmente executado.</span></div>`);
     }
     activeView='home';render();
@@ -91,7 +93,7 @@
     const item=state.plan.find(x=>x.id===c.planId);
     const progress=workoutProgress();
     const now=new Date().toISOString();
-    if(item){
+    if(item&&!c.extraWorkout){
       item.status='abandoned';
       item.abandonedAt=now;
       item.completionPercent=progress.percent;
@@ -99,7 +101,7 @@
       if(!state.skipped.some(x=>x.id===item.id&&x.reason==='abandoned'))state.skipped.push({id:item.id,date:now,name:item.name,reason:'abandoned',completionPercent:progress.percent});
     }
     state.abandoned=Array.isArray(state.abandoned)?state.abandoned:[];
-    state.abandoned.push({id:Date.now(),planId:c.planId,date:now,name:item?.name||'Treino',completedSeries:progress.done,plannedSeries:progress.planned,completionPercent:progress.percent});
+    state.abandoned.push({id:Date.now(),planId:c.planId,date:now,name:item?.name||'Treino',completedSeries:progress.done,plannedSeries:progress.planned,completionPercent:progress.percent,extraWorkout:!!c.extraWorkout,executedOnRestDay:!!c.executedOnRestDay});
     state.current=null;
     save();
     window.VazCalendar?.reconcile?.();
