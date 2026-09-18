@@ -17,6 +17,7 @@ render=function(){
 };
 
 function startRun(item){
+  const pending=state.pendingExtraWorkout,extra=!!(pending&&String(pending.planId)===String(item.id)&&Date.now()-Number(pending.selectedAt||0)<30*60*1000);
   state.currentRun={
     planId:item.id,
     name:item.name,
@@ -32,8 +33,13 @@ function startRun(item){
     effort:null,
     gpsStatus:'GPS ainda não iniciado',
     gpsAccuracy:null,
-    route:[]
+    route:[],
+    extraWorkout:extra,
+    executedOnRestDay:extra&&!!pending.executedOnRestDay,
+    originalPlanDay:item.day,
+    originalPlanId:item.id
   };
+  if(extra)state.pendingExtraWorkout=null;
   save();
   activeView='workout';
   render();
@@ -183,10 +189,12 @@ function finishRunSession(){
     id:Date.now(),date:new Date().toISOString(),name:r.name,type:r.intensity||'Corrida',
     duration:Math.max(1,Math.round(r.elapsedSec/60)),durationSec:r.elapsedSec,
     distance:+Number(r.distanceKm||0).toFixed(2),pace:formatRunPace(paceSec),plannedPace:r.plannedPace,
-    effort:r.effort,route:r.route||[],routePoints:(r.route||[]).length
+    effort:r.effort,route:r.route||[],routePoints:(r.route||[]).length,
+    planId:r.planId,extraWorkout:!!r.extraWorkout,executedOnRestDay:!!r.executedOnRestDay,
+    originalPlanDay:r.originalPlanDay??item?.day,originalPlanId:r.originalPlanId||item?.id
   };
   state.runSessions.push(session);
-  if(item){item.status='done';item.nextPace=suggestRunPace(item.intensity);}
+  if(item&&!r.extraWorkout){item.status='done';item.nextPace=suggestRunPace(item.intensity);}
   state.currentRun=null;
   state.score=Math.min(99,state.score+1);
   save();
@@ -198,7 +206,7 @@ function showRunSummary(s){
   const effort={easy:'Fácil',moderate:'Moderado',hard:'Difícil'}[s.effort]||'—';
   const routeText=s.routePoints?`${s.routePoints} pontos GPS registrados`:'Distância informada manualmente';
   document.getElementById('summaryContent').innerHTML=`<div class="summary-wrap">
-    <div class="summary-hero"><span class="eyebrow">CORRIDA CONCLUÍDA</span><h2>${escapeHtml(s.name)}</h2><p style="color:#bbb">${escapeHtml(routeText)}</p></div>
+    <div class="summary-hero"><span class="eyebrow">${s.extraWorkout?'CORRIDA EXTRA CONCLUÍDA':'CORRIDA CONCLUÍDA'}</span><h2>${escapeHtml(s.name)}</h2><p style="color:#bbb">${escapeHtml(routeText)}</p></div>
     <div class="run-final-grid">
       <div class="summary-box"><small>Tipo de treino</small><strong>${escapeHtml(s.type)}</strong></div>
       <div class="summary-box"><small>Tempo</small><strong>${formatRunTime(s.durationSec)}</strong></div>
