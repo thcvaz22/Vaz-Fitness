@@ -51,7 +51,7 @@ assert.match(api,/getBrand\(auth\.sql,access\.personal_id\)/,'aluno vinculado n�
 assert.match(api,/ON CONFLICT \(personal_id\) DO UPDATE/,'branding não possui atualização persistente');
 
 const version=JSON.parse(versionText);
-assert.equal(version.version,'0.5.8');
-assert.equal(version.versionCode,58);
+assert.equal(version.version,'0.5.9');
+assert.equal(version.versionCode,59);
 
 console.log('Configurações e identidade visual: 33 verificações concluídas.');

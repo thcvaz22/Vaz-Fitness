@@ -45,6 +45,7 @@ jobs:
           node scripts/test-personal-fitness-access.mjs
           node scripts/test-exercise-library-v16.mjs
           node scripts/test-settings-brand-v17.mjs
+          node scripts/test-finance-v18.mjs
       - name: Prepare native web bundle
         run: npm run native:prepare
       - name: Validate packaged experience

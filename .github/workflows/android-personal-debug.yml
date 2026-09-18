@@ -27,6 +27,7 @@ on:
       - 'scripts/test-today-center-v15.mjs'
       - 'scripts/test-exercise-library-v16.mjs'
       - 'scripts/test-settings-brand-v17.mjs'
+      - 'scripts/test-finance-v18.mjs'
       - 'vercel.json'
       - 'package.json'
       - '.github/workflows/android-personal-debug.yml'
@@ -77,6 +78,8 @@ jobs:
           node scripts/test-plan-history-v13.mjs
           node scripts/test-exercise-library-v16.mjs
           node scripts/test-settings-brand-v17.mjs
+          node --check personal/finance-v18.js
+          node scripts/test-finance-v18.mjs
       - name: Prepare Vaz Personal native bundle
         run: node scripts/build-personal-native-v2.mjs
       - name: Validate native bundle
@@ -90,6 +93,8 @@ jobs:
           test -f www-personal/exercise-picker-v14.css
           test -f www-personal/today-center-v15.js
           test -f www-personal/today-center-v15.css
+          test -f www-personal/finance-v18.js
+          test -f www-personal/finance-v18.css
           node --check www-personal/app-v2.js
           node --check www-personal/training-library-v2.js
           node --check www-personal/exercise-catalog-v4.js
@@ -101,6 +106,7 @@ jobs:
           node --check www-personal/visual-system-v11.js
           node --check www-personal/plan-history-v13.js
           node --check www-personal/today-center-v15.js
+          node --check www-personal/finance-v18.js
           grep -q "safety-v9.js" www-personal/index.html
           grep -q "exercise-gallery-v10.js" www-personal/index.html
           grep -q "exercise-catalog-v5.js" www-personal/index.html
@@ -110,6 +116,8 @@ jobs:
           grep -q "exercise-picker-v14.css" www-personal/index.html
           grep -q "today-center-v15.js" www-personal/index.html
           grep -q "today-center-v15.css" www-personal/index.html
+          grep -q "finance-v18.js" www-personal/index.html
+          grep -q "finance-v18.css" www-personal/index.html
       - name: Use Vaz Personal Capacitor config
         run: cp capacitor.personal.config.json capacitor.config.json
       - name: Create Android project

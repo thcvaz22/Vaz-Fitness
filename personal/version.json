@@ -1,6 +1,6 @@
 {
-  "version": "0.5.8",
-  "versionCode": 58,
-  "notes": "Configurações e identidade visual finalizadas com ações rápidas compactas, galeria de 20 ícones, prévia em tempo real e sincronização completa com o Vaz Fitness.",
+  "version": "0.5.9",
+  "versionCode": 59,
+  "notes": "Mensalidades e financeiro completos com visão mensal, filtros, histórico, recibos, exportação e cobrança confirmada pelo WhatsApp.",
   "downloadUrl": "https://github.com/thcvaz22/Vaz-Fitness/releases/download/vaz-apps-latest/Vaz-Personal.apk"
 }

@@ -19,6 +19,7 @@ const copies=[
   ['personal/coach-tools-v4.js',`${out}/coach-tools-v4.js`],
   ['personal/exercise-picker-v14.css',`${out}/exercise-picker-v14.css`],
   ['personal/today-center-v15.css',`${out}/today-center-v15.css`],
+  ['personal/finance-v18.css',`${out}/finance-v18.css`],
   ['personal/plans-v5.js',`${out}/plans-v5.js`],
   ['personal/plan-pricing-v6.js',`${out}/plan-pricing-v6.js`],
   ['personal/training-planner-v6.js',`${out}/training-planner-v6.js`],
@@ -30,6 +31,7 @@ const copies=[
   ['personal/plan-request-workflow-v12.js',`${out}/plan-request-workflow-v12.js`],
   ['personal/plan-history-v13.js',`${out}/plan-history-v13.js`],
   ['personal/today-center-v15.js',`${out}/today-center-v15.js`],
+  ['personal/finance-v18.js',`${out}/finance-v18.js`],
   ['personal/version.json',`${out}/version.json`],
   ['personal/sw.js',`${out}/sw.js`],
   ['personal/manifest.webmanifest',`${out}/manifest.webmanifest`],
@@ -40,4 +42,4 @@ for(const [src,dst] of copies){if(!existsSync(src))throw new Error(`Arquivo ause
 let html=await readFile(`${out}/index.html`,'utf8');
 html=html.replace('<script src="./app-v2.js"></script>',`<script>window.VAZ_PERSONAL_NATIVE=true;window.VAZ_API_BASE='https://vaz-fitness.vercel.app';document.documentElement.classList.add('native-app');</script>\n  <script src="./app-v2.js"></script>`);
 await writeFile(`${out}/index.html`,html);
-console.log('Vaz Personal native bundle: premium + biblioteca + galeria + identidade visual v11 + financeiro + planos + segurança pronto.');
+console.log('Vaz Personal native bundle: premium + biblioteca + identidade visual + financeiro v18 + planos + segurança pronto.');

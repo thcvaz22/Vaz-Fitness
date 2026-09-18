@@ -64,6 +64,6 @@ test('Vaz Fitness mostra as duas imagens e vídeo enviados pelo personal',()=>{
 test('site, cache, pacote Android e versão incluem a biblioteca v5',()=>{
   for(const file of ['personal/index.html','personal/index-v2.html','personal/sw.js','scripts/build-personal-native-v2.mjs'])assert.match(source(file),/exercise-catalog-v5\.js/);
   const version=JSON.parse(source('personal/version.json'));
-  assert.equal(version.version,'0.5.8');
-  assert.equal(version.versionCode,58);
+  assert.equal(version.version,'0.5.9');
+  assert.equal(version.versionCode,59);
 });

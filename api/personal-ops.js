@@ -17,6 +17,7 @@ function validPlan(plan){return Array.isArray(plan)&&plan.length>0&&plan.length<
 function sendError(res,status,message,code='error'){return res.status(status).json({ok:false,error:code,message})}
 function isoDate(v){const m=String(v||'').match(/^\d{4}-\d{2}-\d{2}$/);return m?m[0]:null}
 function money(v){if(v===''||v==null)return null;const n=Number(v);return Number.isFinite(n)&&n>=0&&n<=99999999?n:null}
+function phone(v=''){const digits=String(v||'').replace(/\D/g,'').slice(0,15);return digits.length>=10?digits:null}
 function todayISO(){return new Date().toISOString().slice(0,10)}
 function envInt(name,fallback,min,max){const n=Number(process.env[name]);return Number.isFinite(n)?Math.max(min,Math.min(max,Math.floor(n))):fallback}
 function addMonths(dateStr,months=1,preferredDay=null){
@@ -52,6 +53,21 @@ async function ensureAdvancedTables(sql){
     plan_version integer NOT NULL DEFAULT 0,source text NOT NULL DEFAULT 'manual',created_at timestamptz NOT NULL DEFAULT now()
   )`;
   await sql`CREATE INDEX IF NOT EXISTS vf_plan_history_athlete_idx ON vf_plan_history(athlete_id,created_at DESC)`;
+  await sql`CREATE TABLE IF NOT EXISTS vf_billing_accounts (
+    athlete_id text PRIMARY KEY,personal_id text NOT NULL,monthly_amount numeric(12,2),billing_day integer,
+    next_due_date date,force_pending boolean NOT NULL DEFAULT false,notes text,contact_phone text,
+    created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now()
+  )`;
+  await sql`ALTER TABLE vf_billing_accounts ADD COLUMN IF NOT EXISTS contact_phone text`;
+  await sql`CREATE INDEX IF NOT EXISTS vf_billing_accounts_personal_idx ON vf_billing_accounts(personal_id,next_due_date)`;
+  await sql`CREATE TABLE IF NOT EXISTS vf_payment_history (
+    id text PRIMARY KEY,athlete_id text NOT NULL,personal_id text NOT NULL,due_date date NOT NULL,
+    amount numeric(12,2),status text NOT NULL DEFAULT 'pending',paid_at timestamptz,notes text,
+    created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),
+    UNIQUE(athlete_id,due_date)
+  )`;
+  await sql`ALTER TABLE vf_payment_history ADD COLUMN IF NOT EXISTS notes text`;
+  await sql`CREATE INDEX IF NOT EXISTS vf_payment_history_personal_due_idx ON vf_payment_history(personal_id,due_date DESC)`;
 }
 async function personalAionQuota(sql,personalId){
   const rpm=envInt('AION_PERSONAL_RPM',DEFAULT_PERSONAL_RPM,1,30),rpd=envInt('AION_PERSONAL_RPD',DEFAULT_PERSONAL_RPD,5,500);
@@ -70,7 +86,7 @@ function cycleInfo(row={}){
 function billingInfo(row={}){
   const due=row.next_due_date?String(row.next_due_date).slice(0,10):null;const pending=!!row.force_pending||(due&&due<=todayISO());
   const daysLeft=due?Math.ceil((new Date(`${due}T12:00:00Z`).getTime()-new Date(`${todayISO()}T12:00:00Z`).getTime())/86400000):null;
-  return {configured:!!due,amount:row.monthly_amount==null?null:Number(row.monthly_amount),billingDay:row.billing_day||null,nextDueDate:due,daysLeft,forcePending:!!row.force_pending,status:!due?'not_configured':pending?'pending':'current'};
+  return {configured:!!due,amount:row.monthly_amount==null?null:Number(row.monthly_amount),billingDay:row.billing_day||null,nextDueDate:due,daysLeft,forcePending:!!row.force_pending,status:!due?'not_configured':pending?'pending':'current',contactPhone:row.contact_phone||null,notes:row.notes||''};
 }
 function applyRestDays(plan,restDays=[]){
   const blocked=[...new Set((restDays||[]).map(Number).filter(d=>Number.isInteger(d)&&d>=0&&d<=6))].slice(0,5);
@@ -104,7 +120,7 @@ export default async function handler(req,res){
   try{
     if(req.method==='GET'&&action==='summary'){
       await ensureAdvancedTables(sql);
-      const rows=await sql`SELECT u.id,u.name,u.public_code,a.status,p.plan_version,p.cycle_days,p.cycle_started_at,p.cycle_ends_at,b.monthly_amount,b.billing_day,b.next_due_date,b.force_pending
+      const rows=await sql`SELECT u.id,u.name,u.public_code,a.status,p.plan_version,p.cycle_days,p.cycle_started_at,p.cycle_ends_at,b.monthly_amount,b.billing_day,b.next_due_date,b.force_pending,b.contact_phone,b.notes
         FROM vf_athlete_access a JOIN vf_users u ON u.id=a.athlete_id
         LEFT JOIN vf_training_plans p ON p.athlete_id=u.id LEFT JOIN vf_billing_accounts b ON b.athlete_id=u.id
         WHERE a.personal_id=${user.id} AND a.athlete_id<>a.personal_id ORDER BY u.name`;
@@ -123,11 +139,23 @@ export default async function handler(req,res){
       const pendingRevenue=clients.filter(c=>c.billing.status==='pending').reduce((sum,c)=>sum+(Number(c.billing.amount)||0),0);
       return res.status(200).json({ok:true,clients,alerts,requests,finance:{currentRevenue,pendingRevenue,configured:clients.filter(c=>c.billing.configured).length,overdue:clients.filter(c=>c.billing.status==='pending').length},counts:{cycleReview:clients.filter(c=>['expired','due_soon'].includes(c.cycle.status)).length,billingPending:clients.filter(c=>c.billing.status==='pending').length,billingUpcoming:clients.filter(c=>c.billing.status==='current'&&c.billing.daysLeft!=null&&c.billing.daysLeft<=7).length,planRequests:requests.length,accessPending:clients.filter(c=>c.accessStatus==='pending').length,urgent:alerts.filter(a=>a.severity==='danger').length,totalActions:alerts.length}});
     }
+    if(req.method==='GET'&&action==='finance'){
+      await ensureAdvancedTables(sql);
+      const [accounts,payments]=await Promise.all([
+        sql`SELECT u.id,u.name,u.public_code,b.monthly_amount,b.billing_day,b.next_due_date,b.force_pending,b.notes,b.contact_phone
+          FROM vf_athlete_access a JOIN vf_users u ON u.id=a.athlete_id
+          LEFT JOIN vf_billing_accounts b ON b.athlete_id=u.id AND b.personal_id=${user.id}
+          WHERE a.personal_id=${user.id} AND a.athlete_id<>a.personal_id ORDER BY u.name`,
+        sql`SELECT id,athlete_id,due_date,amount,status,paid_at,notes,updated_at FROM vf_payment_history
+          WHERE personal_id=${user.id} AND due_date>=current_date-interval '36 months' ORDER BY due_date DESC`
+      ]);
+      return res.status(200).json({ok:true,accounts:accounts.map(r=>({id:r.id,name:r.name,publicCode:r.public_code,billing:billingInfo(r)})),payments:payments.map(r=>({id:r.id,athleteId:r.athlete_id,dueDate:String(r.due_date).slice(0,10),amount:r.amount==null?null:Number(r.amount),status:r.status,paidAt:r.paid_at||null,notes:r.notes||'',updatedAt:r.updated_at||null}))});
+    }
     if(req.method==='GET'&&action==='client'){
       await ensureAdvancedTables(sql);
       const athleteId=clean(req.query?.athleteId,120);const client=await linked(sql,user.id,athleteId);if(!client)return sendError(res,404,'Aluno não encontrado.','not_found');
       const plans=await sql`SELECT plan_version,cycle_days,cycle_started_at,cycle_ends_at FROM vf_training_plans WHERE athlete_id=${athleteId} LIMIT 1`;
-      const bills=await sql`SELECT monthly_amount,billing_day,next_due_date,force_pending,notes FROM vf_billing_accounts WHERE athlete_id=${athleteId} LIMIT 1`;
+      const bills=await sql`SELECT monthly_amount,billing_day,next_due_date,force_pending,notes,contact_phone FROM vf_billing_accounts WHERE athlete_id=${athleteId} LIMIT 1`;
       const history=await sql`SELECT id,due_date,amount,status,paid_at,notes FROM vf_payment_history WHERE athlete_id=${athleteId} ORDER BY due_date DESC LIMIT 12`;
       const requests=await sql`SELECT id,reason,rest_days,status,current_plan_version,draft_plan,draft_notes,draft_updated_at,created_at,reviewed_at,completed_at FROM vf_plan_change_requests WHERE athlete_id=${athleteId} AND personal_id=${user.id} ORDER BY created_at DESC LIMIT 5`;
       return res.status(200).json({ok:true,cycle:cycleInfo(plans[0]||{}),billing:billingInfo(bills[0]||{}),billingNotes:bills[0]?.notes||'',payments:history,requests});
@@ -199,14 +227,33 @@ export default async function handler(req,res){
       const rows=await sql`SELECT cycle_days,cycle_started_at,cycle_ends_at FROM vf_training_plans WHERE athlete_id=${athleteId} LIMIT 1`;return res.status(200).json({ok:true,cycle:cycleInfo(rows[0]||{})});
     }
     if(req.method==='POST'&&action==='billing_config'){
+      await ensureAdvancedTables(sql);
       const athleteId=clean(req.body?.athleteId,120);const client=await linked(sql,user.id,athleteId);if(!client)return sendError(res,404,'Aluno não encontrado.','not_found');
-      const due=isoDate(req.body?.dueDate);if(!due)return sendError(res,400,'Informe uma data de vencimento válida.','invalid_due_date');const amount=money(req.body?.amount);const notes=clean(req.body?.notes,500);const day=Number(due.slice(8,10));
-      await sql`INSERT INTO vf_billing_accounts (athlete_id,personal_id,monthly_amount,billing_day,next_due_date,force_pending,notes,updated_at) VALUES (${athleteId},${user.id},${amount},${day},${due},false,${notes||null},now())
-        ON CONFLICT (athlete_id) DO UPDATE SET personal_id=EXCLUDED.personal_id,monthly_amount=EXCLUDED.monthly_amount,billing_day=EXCLUDED.billing_day,next_due_date=EXCLUDED.next_due_date,force_pending=false,notes=EXCLUDED.notes,updated_at=now()`;
+      const due=isoDate(req.body?.dueDate);if(!due)return sendError(res,400,'Informe uma data de vencimento válida.','invalid_due_date');const amount=money(req.body?.amount);if(amount==null)return sendError(res,400,'Informe um valor mensal válido.','invalid_amount');const notes=clean(req.body?.notes,500);const contactPhone=phone(req.body?.contactPhone);const day=Number(due.slice(8,10));
+      await sql`INSERT INTO vf_billing_accounts (athlete_id,personal_id,monthly_amount,billing_day,next_due_date,force_pending,notes,contact_phone,updated_at) VALUES (${athleteId},${user.id},${amount},${day},${due},false,${notes||null},${contactPhone},now())
+        ON CONFLICT (athlete_id) DO UPDATE SET personal_id=EXCLUDED.personal_id,monthly_amount=EXCLUDED.monthly_amount,billing_day=EXCLUDED.billing_day,next_due_date=EXCLUDED.next_due_date,force_pending=false,notes=EXCLUDED.notes,contact_phone=EXCLUDED.contact_phone,updated_at=now()`;
       const id=`pay_${crypto.randomUUID()}`;await sql`INSERT INTO vf_payment_history (id,athlete_id,personal_id,due_date,amount,status) VALUES (${id},${athleteId},${user.id},${due},${amount},'pending') ON CONFLICT (athlete_id,due_date) DO UPDATE SET amount=EXCLUDED.amount,personal_id=EXCLUDED.personal_id,updated_at=now()`;
-      await audit(sql,user.id,athleteId,'billing_configured',{dueDate:due,amount});return res.status(200).json({ok:true,billing:billingInfo({monthly_amount:amount,billing_day:day,next_due_date:due,force_pending:false})});
+      await audit(sql,user.id,athleteId,'billing_configured',{dueDate:due,amount,hasContactPhone:!!contactPhone});return res.status(200).json({ok:true,billing:billingInfo({monthly_amount:amount,billing_day:day,next_due_date:due,force_pending:false,notes,contact_phone:contactPhone})});
+    }
+    if(req.method==='POST'&&action==='payment_update'){
+      await ensureAdvancedTables(sql);
+      const athleteId=clean(req.body?.athleteId,120),due=isoDate(req.body?.dueDate),status=String(req.body?.status||''),notes=clean(req.body?.notes,500);const client=await linked(sql,user.id,athleteId);if(!client)return sendError(res,404,'Aluno não encontrado.','not_found');
+      if(!due||!['paid','pending'].includes(status))return sendError(res,400,'Pagamento ou competência inválida.','invalid_payment');
+      const rows=await sql`SELECT monthly_amount,billing_day,next_due_date FROM vf_billing_accounts WHERE athlete_id=${athleteId} AND personal_id=${user.id} LIMIT 1`;const b=rows[0];if(!b?.next_due_date)return sendError(res,409,'Configure primeiro a mensalidade.','billing_not_configured');
+      const amount=b.monthly_amount==null?null:Number(b.monthly_amount),id=`pay_${crypto.randomUUID()}`,currentDue=String(b.next_due_date).slice(0,10);
+      if(status==='paid')await sql`INSERT INTO vf_payment_history (id,athlete_id,personal_id,due_date,amount,status,paid_at,notes,updated_at) VALUES (${id},${athleteId},${user.id},${due},${amount},'paid',now(),${notes||null},now()) ON CONFLICT (athlete_id,due_date) DO UPDATE SET status='paid',paid_at=now(),amount=EXCLUDED.amount,notes=COALESCE(EXCLUDED.notes,vf_payment_history.notes),updated_at=now()`;
+      else await sql`INSERT INTO vf_payment_history (id,athlete_id,personal_id,due_date,amount,status,paid_at,notes,updated_at) VALUES (${id},${athleteId},${user.id},${due},${amount},'pending',NULL,${notes||null},now()) ON CONFLICT (athlete_id,due_date) DO UPDATE SET status='pending',paid_at=NULL,amount=EXCLUDED.amount,notes=COALESCE(EXCLUDED.notes,vf_payment_history.notes),updated_at=now()`;
+      let nextDueDate=currentDue;
+      if(due===currentDue&&status==='paid'){
+        nextDueDate=addMonths(currentDue,1,Number(b.billing_day)||Number(currentDue.slice(8,10)));
+        await sql`UPDATE vf_billing_accounts SET next_due_date=${nextDueDate},force_pending=false,updated_at=now() WHERE athlete_id=${athleteId} AND personal_id=${user.id}`;
+        const nextId=`pay_${crypto.randomUUID()}`;await sql`INSERT INTO vf_payment_history (id,athlete_id,personal_id,due_date,amount,status) VALUES (${nextId},${athleteId},${user.id},${nextDueDate},${amount},'pending') ON CONFLICT (athlete_id,due_date) DO NOTHING`;
+      }else if(due===currentDue&&status==='pending')await sql`UPDATE vf_billing_accounts SET force_pending=true,updated_at=now() WHERE athlete_id=${athleteId} AND personal_id=${user.id}`;
+      await audit(sql,user.id,athleteId,status==='paid'?'payment_marked_paid':'payment_marked_pending',{dueDate:due,nextDueDate,amount,source:'finance_dashboard'});
+      return res.status(200).json({ok:true,payment:{athleteId,dueDate:due,amount,status,notes,paidAt:status==='paid'?new Date().toISOString():null},nextDueDate});
     }
     if(req.method==='POST'&&action==='billing_mark'){
+      await ensureAdvancedTables(sql);
       const athleteId=clean(req.body?.athleteId,120);const client=await linked(sql,user.id,athleteId);if(!client)return sendError(res,404,'Aluno não encontrado.','not_found');
       const rows=await sql`SELECT monthly_amount,billing_day,next_due_date,force_pending FROM vf_billing_accounts WHERE athlete_id=${athleteId} AND personal_id=${user.id} LIMIT 1`;const b=rows[0];if(!b?.next_due_date)return sendError(res,409,'Configure primeiro a data da mensalidade.','billing_not_configured');
       const status=String(req.body?.status||'');const due=String(b.next_due_date).slice(0,10);const amount=b.monthly_amount==null?null:Number(b.monthly_amount);const id=`pay_${crypto.randomUUID()}`;
