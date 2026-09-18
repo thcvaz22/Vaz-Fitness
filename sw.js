@@ -1,4 +1,4 @@
-const CACHE='vaz-fitness-v30-rest-extra-guide';
+const CACHE='vaz-fitness-v31-branded-confirm';
 const ASSETS=['./','./index.html','./styles.css','./app-core.js','./app-pt-guides.js','./app-ui.js','./app-training.js','./app-ai.js','./app-running.js','./app-profile-v2.js','./app-onboarding-v3.js','./app-calibration.js','./app-calendar.js','./app-integrations.js','./app-workout-exit.js','./app-training-details.js','./app-coach-v2.js','./app-running-plus.js','./app-polish-v2.js','./app-membership.js','./app-auth-entry-v8.js','./app-branding.js','./app-custom-exercise-media.js','./app-scale-v1.js','./app-experience-v6.js','./app-calendar-cycle-v7.js','./app-ux-v9.js','./app-plan-request-v10.js','./app-plan-sync-v11.js','./app-profile-cleanup-v12.js','./assets/body-measurement-guide-v4.svg','./assets/body-measurement-guide-v2.png','./manifest.webmanifest','./icon.svg'];
 
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));self.skipWaiting();});
