@@ -20,7 +20,7 @@
   function tail(list,max){return Array.isArray(list)?list.slice(-max):[]}
   function sanitizeStateForCloud(){
     const copy=JSON.parse(JSON.stringify(state));
-    delete copy.chat;delete copy.current;delete copy.currentRun;
+    delete copy.chat;delete copy.current;delete copy.currentRun;delete copy.pendingExtraWorkout;
     // O plano possui versionamento próprio no backend e nunca deve ser rebaixado por um snapshot.
     delete copy.plan;delete copy.cloudPlanVersion;delete copy.cloudPlanUpdatedAt;delete copy.cloudStateVersion;
     copy.sessions=tail(copy.sessions,220);
@@ -46,7 +46,7 @@
   function applyCloudState(remote){
     if(!remote||typeof remote!=='object')return;
     const preserve={chat:state.chat,plan:state.plan,cloudPlanVersion:state.cloudPlanVersion,cloudPlanUpdatedAt:state.cloudPlanUpdatedAt};
-    const clean={...remote};delete clean.plan;delete clean.cloudPlanVersion;delete clean.cloudPlanUpdatedAt;delete clean.cloudStateVersion;
+    const clean={...remote};delete clean.plan;delete clean.cloudPlanVersion;delete clean.cloudPlanUpdatedAt;delete clean.cloudStateVersion;delete clean.pendingExtraWorkout;
     state={...state,...clean,...preserve,onboarded:true};
   }
   function mergeList(server=[],local=[],max=220){
@@ -61,7 +61,7 @@
     const merged={...(isObjectLike(server)?server:{}),...(isObjectLike(local)?local:{})};
     const limits={sessions:220,runSessions:180,calendarEvents:730,bodyMeasurements:120,readinessCheckins:120,skipped:180};
     Object.entries(limits).forEach(([key,max])=>{merged[key]=mergeList(server?.[key],local?.[key],max)});
-    delete merged.plan;delete merged.cloudPlanVersion;delete merged.cloudPlanUpdatedAt;delete merged.cloudStateVersion;
+    delete merged.plan;delete merged.cloudPlanVersion;delete merged.cloudPlanUpdatedAt;delete merged.cloudStateVersion;delete merged.pendingExtraWorkout;
     return merged;
   }
   function isObjectLike(value){return value&&typeof value==='object'&&!Array.isArray(value)}
