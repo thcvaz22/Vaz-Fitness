@@ -53,7 +53,7 @@
   function openRequestDialog(){
     const d=document.createElement('dialog');d.className='dialog vf-request-dialog';d.innerHTML=`<form data-plan-request-form><div class="vf-request-head"><div><span class="eyebrow">NOVO TREINO</span><h2>Solicitar mudança de plano</h2><p>Seu treino atual não será alterado agora. A solicitação será enviada para o personal revisar.</p></div><button type="button" class="training-detail-close" data-close>✕</button></div><label>Por que você quer um novo treino?<textarea name="reason" rows="4" minlength="8" maxlength="500" required placeholder="Ex.: mudei meus horários, quero trocar o objetivo, senti dificuldade em alguns exercícios…"></textarea></label><fieldset class="vf-request-rest"><legend>Dias de descanso</legend><div>${restOptions()}</div><small>Para ${trainingDays()} dias de treino, escolha no máximo ${maxRestDays()} dia(s).</small></fieldset><label class="check-row vf-confirm-request"><input type="checkbox" name="confirmed" required><span>Tenho certeza de que quero enviar esta solicitação ao meu personal.</span></label><div class="dialog-actions"><button type="button" class="btn ghost" data-close>Cancelar</button><button type="submit" class="btn primary">Enviar solicitação</button></div></form>`;document.body.appendChild(d);d.showModal();d.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>{d.close();d.remove()});
     d.querySelectorAll('input[name="requestRestDays"]').forEach(input=>input.onchange=()=>{const checked=[...d.querySelectorAll('input[name="requestRestDays"]:checked')];if(checked.length>maxRestDays()){input.checked=false;toast(`Escolha no máximo ${maxRestDays()} dia(s) de descanso.`)}});
-    d.querySelector('form').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget),button=e.currentTarget.querySelector('button[type="submit"]'),restDays=f.getAll('requestRestDays').map(Number).slice(0,5);if(restDays.length>maxRestDays())return toast(`Escolha no máximo ${maxRestDays()} dia(s) de descanso.`);button.disabled=true;button.textContent='Enviando…';try{const data=await api('plan_change_request',{method:'POST',body:{reason:String(f.get('reason')||'').trim(),restDays}});state.profile.restDays=restDays;state.planChangeRequest={...data.request,createdAt:new Date().toISOString()};save();d.close();d.remove();render();toast('Solicitação enviada. Seu treino atual foi mantido.')}catch(err){button.disabled=false;button.textContent='Enviar solicitação';toast(err.message)}};
+    d.querySelector('form').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget),button=e.currentTarget.querySelector('button[type="submit"]'),restDays=f.getAll('requestRestDays').map(Number).slice(0,5);if(restDays.length>maxRestDays())return toast(`Escolha no máximo ${maxRestDays()} dia(s) de descanso.`);button.disabled=true;button.textContent='Enviando…';try{const data=await api('plan_change_request',{method:'POST',body:{reason:String(f.get('reason')||'').trim(),restDays}});state.profile.restDays=[...new Set(restDays)].sort((a,b)=>a-b);state.profile.restDaysUpdatedAt=Date.now();state.weekOverrides={};state.remapRequests=[];state.weekOverridesResetPending=true;state.planChangeRequest={...data.request,createdAt:new Date().toISOString()};save();d.close();d.remove();render();toast('Solicitação enviada. Seu treino atual foi mantido.')}catch(err){button.disabled=false;button.textContent='Enviar solicitação';toast(err.message)}};
   }
 
   function applyRestSelection(input){
@@ -61,11 +61,14 @@
     if(checked.length>maxRestDays()){
       input.checked=false;toast(`Com ${trainingDays()} dias de treino, escolha no máximo ${maxRestDays()} dia(s) de descanso.`);return;
     }
-    state.profile.restDays=checked.map(x=>Number(x.value)).sort((a,b)=>a-b);
+    state.profile.restDays=[...new Set(checked.map(x=>Number(x.value)))].sort((a,b)=>a-b);
+    state.profile.restDaysUpdatedAt=Date.now();
     state.weekOverrides={};
+    state.remapRequests=[];
     state.weekOverridesResetPending=true;
     save();
-    toast('Dias de descanso atualizados. Toque em “Remanejar treinos” para redistribuir o plano.');
+    render();
+    toast('Dias de descanso substituídos. Toque em “Remanejar treinos” para redistribuir o plano.');
   }
 
   async function remapWorkouts(){
@@ -76,6 +79,7 @@
     if(!confirm('Remanejar os dias dos treinos mantendo exatamente os mesmos exercícios e prescrições?'))return;
     state.planDayOverrides={};
     state.weekOverrides={};
+    state.remapRequests=[];
     state.weekOverridesResetPending=true;
     workouts.forEach((item,index)=>{item.day=allowed[index%allowed.length];state.planDayOverrides[item.id]=item.day;delete item.scheduledDate});
     save();
