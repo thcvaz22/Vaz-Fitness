@@ -68,7 +68,10 @@
   }
   async function syncRestDays(){
     if(!token())return;
-    try{await api('cloud_state',{method:'POST',body:{state:safeCloudState()}})}catch(error){if(![401,423].includes(Number(error.status)))console.warn('Vaz Fitness: não foi possível sincronizar dias de descanso.',error)}
+    try{
+      if(window.VazCloudSync?.syncNow)await window.VazCloudSync.syncNow();
+      else await api('cloud_state',{method:'POST',body:{state:safeCloudState(),baseVersion:Number(state.cloudStateVersion)||0}});
+    }catch(error){if(![401,423].includes(Number(error.status)))console.warn('Vaz Fitness: não foi possível sincronizar dias de descanso.',error)}
   }
   function repairRequestSubmit(root=document){
     root.querySelectorAll?.('.vf-request-dialog form button.btn.primary:not([type])').forEach(button=>button.setAttribute('type','submit'));

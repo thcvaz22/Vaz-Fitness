@@ -1,0 +1,16 @@
+{
+  "version": "0.6.0",
+  "versionCode": 60,
+  "releasedAt": "2026-09-18",
+  "notes": "Finalização técnica: versão única web/Android, recuperação de conta e sincronização com resolução segura de conflitos.",
+  "apps": {
+    "fitness": {
+      "appId": "com.vazfitness.app",
+      "downloadUrl": "https://github.com/thcvaz22/Vaz-Fitness/releases/download/vaz-apps-latest/Vaz-Fitness.apk"
+    },
+    "personal": {
+      "appId": "com.vazpersonal.app",
+      "downloadUrl": "https://github.com/thcvaz22/Vaz-Fitness/releases/download/vaz-apps-latest/Vaz-Personal.apk"
+    }
+  }
+}

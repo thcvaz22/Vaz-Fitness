@@ -74,7 +74,7 @@ assert.match(css,/\.vp-student-finance-grid/);
 assert.match(css,/\.vp-finance-ring/);
 
 const version=JSON.parse(versionText);
-assert.equal(version.version,'0.5.9');
-assert.equal(version.versionCode,59);
+assert.equal(version.version,'0.6.0');
+assert.equal(version.versionCode,60);
 
 console.log('Mensalidades e financeiro v18: 48 verificações concluídas.');

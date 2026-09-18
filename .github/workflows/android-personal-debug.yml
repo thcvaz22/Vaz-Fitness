@@ -30,6 +30,8 @@ on:
       - 'scripts/test-finance-v18.mjs'
       - 'vercel.json'
       - 'package.json'
+      - 'release.json'
+      - 'version.json'
       - '.github/workflows/android-personal-debug.yml'
 
 jobs:
@@ -80,6 +82,8 @@ jobs:
           node scripts/test-settings-brand-v17.mjs
           node --check personal/finance-v18.js
           node scripts/test-finance-v18.mjs
+          npm run release:check
+          node scripts/test-finalization-v19.mjs
       - name: Prepare Vaz Personal native bundle
         run: node scripts/build-personal-native-v2.mjs
       - name: Validate native bundle
@@ -122,6 +126,8 @@ jobs:
         run: cp capacitor.personal.config.json capacitor.config.json
       - name: Create Android project
         run: npx cap add android
+      - name: Apply unified release version
+        run: node scripts/configure-android-version.mjs
       - name: Sync Capacitor
         run: npx cap sync android
       - name: Apply Vaz Personal launcher icon

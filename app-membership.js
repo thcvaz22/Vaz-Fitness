@@ -2,23 +2,26 @@
 (function installMembership(){
   const TOKEN_KEY='vazFitness.authToken';
   const CLOUD_USER_KEY='vazFitness.cloudUser';
+  const SYNC_QUEUE_KEY='vazFitness.pendingSync.v19';
   const API_BASE=window.VAZ_API_BASE||'';
   let authToken=localStorage.getItem(TOKEN_KEY)||'';
-  let account={user:null,access:null,status:authToken?'checking':'guest',planVersion:0,lastCheck:0};
-  let authMode='login',cloudTimer=null,pulling=false;
+  let account={user:null,access:null,status:authToken?'checking':'guest',planVersion:0,cloudStateVersion:Number(state?.cloudStateVersion)||0,lastCheck:0};
+  let authMode='login',cloudTimer=null,pulling=false,pushing=false,pushAgain=false;
 
   function vfApiUrl(action){return `${API_BASE}/api/vf?action=${encodeURIComponent(action)}`;}
   async function vfApi(action,{method='GET',body=null}={}){
     const headers={'Content-Type':'application/json'};if(authToken)headers.Authorization=`Bearer ${authToken}`;
     const r=await fetch(vfApiUrl(action),{method,headers,body:body?JSON.stringify(body):undefined});
     const data=await r.json().catch(()=>({}));
-    if(!r.ok){const err=new Error(data.message||'Não foi possível acessar sua conta.');err.code=data.error||'';err.status=r.status;throw err}
+    if(!r.ok){const err=new Error(data.message||'Não foi possível acessar sua conta.');err.code=data.error||'';err.status=r.status;err.details=data;throw err}
     return data;
   }
   function tail(list,max){return Array.isArray(list)?list.slice(-max):[]}
   function sanitizeStateForCloud(){
     const copy=JSON.parse(JSON.stringify(state));
     delete copy.chat;delete copy.current;delete copy.currentRun;
+    // O plano possui versionamento próprio no backend e nunca deve ser rebaixado por um snapshot.
+    delete copy.plan;delete copy.cloudPlanVersion;delete copy.cloudPlanUpdatedAt;delete copy.cloudStateVersion;
     copy.sessions=tail(copy.sessions,220);
     copy.runSessions=tail(copy.runSessions,180).map(r=>{const x={...r};delete x.route;return x;});
     copy.calendarEvents=tail(copy.calendarEvents,730);
@@ -41,9 +44,29 @@
   }
   function applyCloudState(remote){
     if(!remote||typeof remote!=='object')return;
-    const preserveChat=state.chat;
-    state={...state,...remote,onboarded:true,chat:preserveChat};
+    const preserve={chat:state.chat,plan:state.plan,cloudPlanVersion:state.cloudPlanVersion,cloudPlanUpdatedAt:state.cloudPlanUpdatedAt};
+    const clean={...remote};delete clean.plan;delete clean.cloudPlanVersion;delete clean.cloudPlanUpdatedAt;delete clean.cloudStateVersion;
+    state={...state,...clean,...preserve,onboarded:true};
   }
+  function mergeList(server=[],local=[],max=220){
+    const rows=new Map();
+    [...(Array.isArray(server)?server:[]),...(Array.isArray(local)?local:[])].forEach((item,index)=>{
+      const key=item&&typeof item==='object'?(item.id||item.sessionId||item.date||item.createdAt||item.created_at):null;
+      rows.set(String(key||`json:${JSON.stringify(item)}:${index}`),item);
+    });
+    return [...rows.values()].slice(-max);
+  }
+  function mergeCloudConflict(server,local){
+    const merged={...(isObjectLike(server)?server:{}),...(isObjectLike(local)?local:{})};
+    const limits={sessions:220,runSessions:180,calendarEvents:730,bodyMeasurements:120,readinessCheckins:120,skipped:180};
+    Object.entries(limits).forEach(([key,max])=>{merged[key]=mergeList(server?.[key],local?.[key],max)});
+    delete merged.plan;delete merged.cloudPlanVersion;delete merged.cloudPlanUpdatedAt;delete merged.cloudStateVersion;
+    return merged;
+  }
+  function isObjectLike(value){return value&&typeof value==='object'&&!Array.isArray(value)}
+  function hasPendingSync(){return !!localStorage.getItem(SYNC_QUEUE_KEY)}
+  function markPendingSync(){try{localStorage.setItem(SYNC_QUEUE_KEY,JSON.stringify({queuedAt:new Date().toISOString(),baseVersion:account.cloudStateVersion||0}))}catch{}}
+  function clearPendingSync(){localStorage.removeItem(SYNC_QUEUE_KEY)}
   function publicCode(){return account.user?.publicCode||account.user?.public_code||'—';}
   function gateStatus(){if(!state.onboarded)return 'none';if(!authToken)return 'auth';return account.status;}
   function gateNeeded(){return ['auth','checking','pending','suspended','error'].includes(gateStatus());}
@@ -91,16 +114,22 @@
   function renderErrorGate(){
     setGateBody(true);document.getElementById('view').innerHTML=`<section class="vf-account-gate"><div class="vf-gate-card suspended"><span class="eyebrow">VAZ FITNESS</span><h1>Não foi possível entrar</h1><p class="vf-contact-personal">Contate seu personal.</p><button class="btn ghost" id="refreshVfAccess">Tentar novamente</button></div></section>`;document.getElementById('refreshVfAccess').onclick=()=>checkAccess(true);
   }
-  function logoutAccount(){localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(CLOUD_USER_KEY);authToken='';account={user:null,access:null,status:'guest',planVersion:0,lastCheck:0};authMode='login';render();}
+  function logoutAccount(){localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(CLOUD_USER_KEY);localStorage.removeItem(SYNC_QUEUE_KEY);authToken='';account={user:null,access:null,status:'guest',planVersion:0,cloudStateVersion:0,lastCheck:0};authMode='login';render();}
 
   async function pullCloudOnce(){
     if(pulling||!authToken||account.status!=='approved')return;pulling=true;
     try{
       const cloud=await vfApi('cloud_state');
       const key=localStorage.getItem(CLOUD_USER_KEY);
-      if(key!==account.user?.id||!(state.sessions?.length||state.runSessions?.length)){
+      const freshDevice=key!==account.user?.id||!(state.sessions?.length||state.runSessions?.length||state.bodyMeasurements?.length);
+      if(freshDevice){
         applyCloudState(cloud.state||{});localStorage.setItem(CLOUD_USER_KEY,account.user?.id||'');
+      }else if(hasPendingSync()){
+        const local=JSON.parse(JSON.stringify(state));applyCloudState(mergeCloudConflict(cloud.state||{},local));
+      }else{
+        applyCloudState(cloud.state||{});
       }
+      account.cloudStateVersion=Number(cloud.state_version)||0;state.cloudStateVersion=account.cloudStateVersion;baseSave();
     }catch{}finally{pulling=false}
   }
   async function checkAccess(showLoader=false){
@@ -129,8 +158,32 @@
     if(account.status==='approved'&&Date.now()-account.lastCheck<60000)return true;
     return checkAccess(false);
   }
-  function scheduleCloudPush(){
-    if(account.status!=='approved'||!authToken)return;clearTimeout(cloudTimer);cloudTimer=setTimeout(async()=>{try{await vfApi('cloud_state',{method:'POST',body:{state:sanitizeStateForCloud()}})}catch(err){if(err.code==='suspended'){account.status='suspended';render();}}},7000);
+  async function pushCloudNow(retry=true){
+    if(account.status!=='approved'||!authToken)return false;
+    if(pushing){pushAgain=true;return false}
+    if(!navigator.onLine){markPendingSync();return false}
+    pushing=true;
+    try{
+      const result=await vfApi('cloud_state',{method:'POST',body:{state:sanitizeStateForCloud(),baseVersion:account.cloudStateVersion||0}});
+      account.cloudStateVersion=Number(result.state_version)||account.cloudStateVersion||0;state.cloudStateVersion=account.cloudStateVersion;clearPendingSync();baseSave();
+      return true;
+    }catch(err){
+      if(err.code==='sync_conflict'&&retry){
+        const local=JSON.parse(JSON.stringify(state));
+        applyCloudState(mergeCloudConflict(err.details?.state||{},local));
+        account.cloudStateVersion=Number(err.details?.stateVersion)||0;state.cloudStateVersion=account.cloudStateVersion;baseSave();
+        pushing=false;return await pushCloudNow(false);
+      }
+      markPendingSync();
+      if(err.code==='suspended'){account.status='suspended';render();}
+      return false;
+    }finally{
+      pushing=false;
+      if(pushAgain){pushAgain=false;scheduleCloudPush(400)}
+    }
+  }
+  function scheduleCloudPush(delay=1800){
+    if(account.status!=='approved'||!authToken)return;markPendingSync();clearTimeout(cloudTimer);cloudTimer=setTimeout(()=>pushCloudNow(),delay);
   }
 
   const baseRender=render;
@@ -158,11 +211,15 @@
     const html=baseRenderProfile();
     if(account.status!=='approved')return html;
     const personalName=account.user?.role==='personal'?'Você mesmo':account.access?.personal_name||'Vinculado';
-    const card=`<div class="card"><div class="card-head"><div><h2>Conta e acompanhamento</h2><p>Vínculo com o Vaz Personal</p></div><span class="pill">SINCRONIZADO</span></div><div class="detail-list"><div class="detail-row"><span>Código ID</span><strong>${escapeHtml(publicCode())}</strong></div><div class="detail-row"><span>Personal</span><strong>${escapeHtml(personalName)}</strong></div><div class="detail-row"><span>Status</span><strong>Liberado</strong></div></div><div class="hero-actions"><button class="btn ghost" data-vf-sync>Sincronizar agora</button><button class="btn danger-soft" data-vf-logout>Sair da conta</button></div></div>`;
+    const syncLabel=!navigator.onLine?'OFFLINE':hasPendingSync()?'AGUARDANDO':'SINCRONIZADO';
+    const card=`<div class="card"><div class="card-head"><div><h2>Conta e acompanhamento</h2><p>Vínculo com o Vaz Personal</p></div><span class="pill">${syncLabel}</span></div><div class="detail-list"><div class="detail-row"><span>Código ID</span><strong>${escapeHtml(publicCode())}</strong></div><div class="detail-row"><span>Personal</span><strong>${escapeHtml(personalName)}</strong></div><div class="detail-row"><span>Status</span><strong>Liberado</strong></div></div><div class="hero-actions"><button class="btn ghost" data-vf-sync>Sincronizar agora</button><button class="btn danger-soft" data-vf-logout>Sair da conta</button></div></div>`;
     return html.replace(/<\/section>\s*$/,`${card}</section>`);
   };
   const baseBindDynamic=bindDynamic;
-  bindDynamic=function(){baseBindDynamic();document.querySelector('[data-vf-sync]')?.addEventListener('click',()=>checkAccess(true));document.querySelector('[data-vf-logout]')?.addEventListener('click',logoutAccount);};
+  bindDynamic=function(){baseBindDynamic();document.querySelector('[data-vf-sync]')?.addEventListener('click',async()=>{await pushCloudNow();await checkAccess(true)});document.querySelector('[data-vf-logout]')?.addEventListener('click',logoutAccount);};
+
+  window.VazCloudSync={syncNow:pushCloudNow,pull:pullCloudOnce,pending:hasPendingSync};
+  window.addEventListener('online',()=>{if(authToken&&state.onboarded){pushCloudNow().then(()=>checkAccess(false))}});
 
   const style=document.createElement('style');style.textContent=`
     body.vf-account-gated .bottom-nav{display:none!important}.vf-account-gate{min-height:calc(100dvh - 110px);display:grid;place-items:center;padding:20px}.vf-gate-card{width:min(580px,100%);background:#fff;border:1px solid var(--line);border-radius:30px;padding:26px;box-shadow:0 28px 70px rgba(0,0,0,.12);text-align:left}.vf-gate-card h1{font-size:clamp(32px,7vw,52px);line-height:1.02;margin:9px 0 12px}.vf-gate-card>p{color:var(--muted);line-height:1.55}.vf-gate-brand{display:flex;align-items:flex-start;gap:13px}.vf-id-logo{width:48px;height:48px;border-radius:16px;background:var(--yellow);display:grid;place-items:center;font-weight:950}.vf-account-form{display:flex;flex-direction:column;gap:11px;margin-top:18px}.vf-account-form label{font-size:11px;font-weight:800}.vf-account-form input{width:100%;margin-top:5px;border:1px solid var(--line);border-radius:14px;padding:13px;font-size:16px}.vf-auth-switch{display:block;margin:14px auto 0;border:0;background:transparent;color:#766000;font-weight:850}.vf-public-code{border:2px solid var(--yellow);background:#fffbea;border-radius:22px;padding:18px;text-align:center;margin:20px 0}.vf-public-code small,.vf-public-code strong{display:block}.vf-public-code strong{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:clamp(22px,6vw,34px);letter-spacing:.06em;margin:7px 0 13px}.vf-send-message{background:#f7f7f7;border:1px solid var(--line);border-radius:18px;padding:15px;margin-bottom:16px}.vf-send-message strong,.vf-send-message span{display:block}.vf-send-message span{color:var(--muted);font-size:11px;line-height:1.5;margin-top:5px}.vf-lock{width:62px;height:62px;border-radius:20px;background:#ffebe9;color:#a82c26;font-size:34px;font-weight:950;display:grid;place-items:center;margin-bottom:16px}.vf-gate-card.suspended{text-align:center}.vf-contact-personal{font-size:20px!important;color:#333!important;font-weight:800}.vf-spinner{width:44px;height:44px;border:5px solid #eee;border-top-color:var(--yellow);border-radius:50%;animation:vfspin .8s linear infinite;margin:0 auto 18px}.vf-gate-card.checking{text-align:center}@keyframes vfspin{to{transform:rotate(360deg)}}

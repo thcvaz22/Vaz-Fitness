@@ -1,5 +1,6 @@
 import { mkdir, rm, copyFile, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { readRelease,publicManifest } from './release-config.mjs';
 
 const out='www-personal';
 await rm(out,{recursive:true,force:true});
@@ -32,12 +33,14 @@ const copies=[
   ['personal/plan-history-v13.js',`${out}/plan-history-v13.js`],
   ['personal/today-center-v15.js',`${out}/today-center-v15.js`],
   ['personal/finance-v18.js',`${out}/finance-v18.js`],
-  ['personal/version.json',`${out}/version.json`],
   ['personal/sw.js',`${out}/sw.js`],
   ['personal/manifest.webmanifest',`${out}/manifest.webmanifest`],
   ['personal/icon.svg',`${out}/icon.svg`]
 ];
 for(const [src,dst] of copies){if(!existsSync(src))throw new Error(`Arquivo ausente: ${src}`);await copyFile(src,dst)}
+const release=await readRelease();
+await writeFile(`${out}/version.json`,`${JSON.stringify(publicManifest(release,'personal'),null,2)}\n`);
+await copyFile('release.json',`${out}/release.json`);
 
 let html=await readFile(`${out}/index.html`,'utf8');
 html=html.replace('<script src="./app-v2.js"></script>',`<script>window.VAZ_PERSONAL_NATIVE=true;window.VAZ_API_BASE='https://vaz-fitness.vercel.app';document.documentElement.classList.add('native-app');</script>\n  <script src="./app-v2.js"></script>`);

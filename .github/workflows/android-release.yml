@@ -15,6 +15,8 @@ on:
       - 'index.html'
       - 'styles.css'
       - 'package.json'
+      - 'release.json'
+      - 'version.json'
       - '.github/workflows/android-release.yml'
 
 permissions:
@@ -24,8 +26,6 @@ jobs:
   signed-release:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: 0.5.9
-      APP_VERSION_CODE: 59
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -42,6 +42,7 @@ jobs:
         run: npm install
       - name: Validate source
         run: |
+          npm run release:check
           node --check app-plan-request-v10.js
           node --check app-plan-sync-v11.js
           node --check personal/advanced-v8.js
@@ -66,6 +67,7 @@ jobs:
           node scripts/test-plan-request-v10.mjs
           node scripts/test-personal-fitness-access.mjs
           node scripts/test-plan-history-v13.mjs
+          node scripts/test-finalization-v19.mjs
       - name: Decode permanent signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -104,7 +106,7 @@ jobs:
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Vaz-Apps-Android-Release-0.5.9
+          name: Vaz-Apps-Android-Release
           path: |
             Vaz-Personal.apk
             Vaz-Fitness.apk
@@ -113,6 +115,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view vaz-apps-latest >/dev/null 2>&1 || gh release create vaz-apps-latest --title "Vaz Apps Android 0.5.9" --notes "Versões oficiais assinadas do Vaz Fitness e Vaz Personal."
-          gh release edit vaz-apps-latest --title "Vaz Apps Android 0.5.9" --notes "Versões oficiais assinadas do Vaz Fitness e Vaz Personal."
+          RELEASE_VERSION=$(node -p "JSON.parse(require('fs').readFileSync('release.json','utf8')).version")
+          gh release view vaz-apps-latest >/dev/null 2>&1 || gh release create vaz-apps-latest --title "Vaz Apps Android $RELEASE_VERSION" --notes "Versões oficiais assinadas do Vaz Fitness e Vaz Personal."
+          gh release edit vaz-apps-latest --title "Vaz Apps Android $RELEASE_VERSION" --notes "Versões oficiais assinadas do Vaz Fitness e Vaz Personal."
           gh release upload vaz-apps-latest Vaz-Personal.apk Vaz-Fitness.apk --clobber

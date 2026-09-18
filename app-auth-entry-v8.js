@@ -18,7 +18,7 @@
     if(bearer)headers.Authorization=`Bearer ${bearer}`;
     const response=await fetch(apiUrl(action),{method,headers,body:body?JSON.stringify(body):undefined});
     const data=await response.json().catch(()=>({}));
-    if(!response.ok){const error=new Error(data.message||'Não foi possível concluir esta operação.');error.code=data.error||'';error.status=response.status;throw error;}
+    if(!response.ok){const error=new Error(data.message||'Não foi possível concluir esta operação.');error.code=data.error||'';error.status=response.status;error.details=data;throw error;}
     return data;
   }
   function registrationStage(){return sessionStorage.getItem(REG_STAGE_KEY)||'';}
@@ -71,11 +71,13 @@
       return accessData;
     }
     let remote=null;
+    let cloudVersion=0;
     if(access?.status==='approved'){
-      try{remote=(await api('cloud_state',{bearer})).state||null;}catch{}
+      try{const cloud=await api('cloud_state',{bearer});remote=cloud.state||null;cloudVersion=Number(cloud.state_version)||0;}catch{}
     }
-    if(remote&&typeof remote==='object')state={...state,...remote,onboarded:true};
+    if(remote&&typeof remote==='object'){const clean={...remote};delete clean.plan;state={...state,...clean,onboarded:true};}
     else state={...state,onboarded:true};
+    state.cloudStateVersion=cloudVersion;
     if(accessData.plan?.plan&&Array.isArray(accessData.plan.plan))state.plan=accessData.plan.plan;
     if(user?.name&&state.profile)state.profile={...state.profile,name:state.profile.name||user.name};
     persistState();

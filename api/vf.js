@@ -223,9 +223,27 @@ export default async function handler(req,res){
       const access=await getAthleteAccess(auth.sql,auth.user.id);
       if(access?.status!=='approved')return sendError(res,423,access?.status==='suspended'?'Não foi possível entrar, contate seu personal.':'Seu treino ainda não foi liberado pelo personal.',access?.status||'pending');
       const state=isObject(req.body?.state)?req.body.state:null;
+      const suppliedBase=req.body?.baseVersion;
+      const baseVersion=suppliedBase===undefined||suppliedBase===null?null:Number(suppliedBase);
       if(!state||jsonSize(state)>2000000)return sendError(res,400,'Estado inválido ou muito grande.','invalid_state');
-      const rows=await auth.sql`INSERT INTO vf_cloud_state (user_id,state,state_version,updated_at) VALUES (${auth.user.id},CAST(${JSON.stringify(state)} AS jsonb),1,now())
-        ON CONFLICT (user_id) DO UPDATE SET state=EXCLUDED.state,state_version=vf_cloud_state.state_version+1,updated_at=now() RETURNING state_version,updated_at`;
+      if(baseVersion!==null&&(!Number.isInteger(baseVersion)||baseVersion<0))return sendError(res,400,'Versão-base inválida.','invalid_base_version');
+      let rows=[];
+      if(baseVersion===null){
+        // Compatibilidade temporária com versões antigas já instaladas.
+        rows=await auth.sql`INSERT INTO vf_cloud_state (user_id,state,state_version,updated_at) VALUES (${auth.user.id},CAST(${JSON.stringify(state)} AS jsonb),1,now())
+          ON CONFLICT (user_id) DO UPDATE SET state=EXCLUDED.state,state_version=vf_cloud_state.state_version+1,updated_at=now() RETURNING state_version,updated_at`;
+      }else if(baseVersion===0){
+        rows=await auth.sql`INSERT INTO vf_cloud_state (user_id,state,state_version,updated_at) VALUES (${auth.user.id},CAST(${JSON.stringify(state)} AS jsonb),1,now())
+          ON CONFLICT (user_id) DO NOTHING RETURNING state_version,updated_at`;
+      }else{
+        rows=await auth.sql`UPDATE vf_cloud_state SET state=CAST(${JSON.stringify(state)} AS jsonb),state_version=state_version+1,updated_at=now()
+          WHERE user_id=${auth.user.id} AND state_version=${baseVersion} RETURNING state_version,updated_at`;
+      }
+      if(!rows.length){
+        const latest=await auth.sql`SELECT state,state_version,updated_at FROM vf_cloud_state WHERE user_id=${auth.user.id} LIMIT 1`;
+        const current=latest[0]||{state:{},state_version:0,updated_at:null};
+        return res.status(409).json({ok:false,error:'sync_conflict',message:'Os dados foram atualizados em outro dispositivo. As alterações serão combinadas.',state:current.state,stateVersion:Number(current.state_version)||0,updatedAt:current.updated_at});
+      }
       return res.status(200).json({ok:true,...rows[0]});
     }
 

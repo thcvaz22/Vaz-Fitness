@@ -1,10 +1,12 @@
 {
   "name": "vaz-fitness",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "description": "Vaz Fitness — treino adaptativo com AION IA",
   "scripts": {
+    "release:sync": "node scripts/sync-release-manifests.mjs",
+    "release:check": "node scripts/check-release-consistency.mjs",
     "native:prepare": "node scripts/build-native.mjs",
     "native:sync": "npm run native:prepare && npx cap sync",
     "native:android": "npm run native:prepare && npx cap sync android",

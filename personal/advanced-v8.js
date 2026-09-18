@@ -2,7 +2,7 @@
 (()=>{
   const CACHE_PREFIX='vazPersonal.offline.v8:';
   const ALERT_KEY='vazPersonal.lastAlert.v8';
-  const APP_VERSION='0.5.9';
+  const APP_VERSION='0.6.0';
   const advancedApi=(action,o={})=>req('/api/personal-ops',{...o,params:{...(o.params||{}),action}});
   const cacheKey=(path,o)=>CACHE_PREFIX+btoa(unescape(encodeURIComponent(`${path}|${JSON.stringify(o?.params||{})}`))).replace(/=+$/,'');
   const getCache=key=>{try{return JSON.parse(localStorage.getItem(key)||'null')}catch{return null}};
@@ -12,6 +12,11 @@
   const baseReq=req;
   req=async function(path,options={}){
     const method=String(options.method||'GET').toUpperCase(),key=cacheKey(path,options);
+    if(method!=='GET'&&!navigator.onLine){
+      offlineMode=true;window.dispatchEvent(new CustomEvent('vp-connectivity'));
+      const error=new Error('Sem conexão. Para proteger pagamentos, planos e acessos contra duplicação, conecte-se antes de alterar dados.');
+      error.code='offline_write_blocked';throw error;
+    }
     try{
       const data=await baseReq(path,options);
       if(method==='GET')setCache(key,data);
@@ -30,7 +35,7 @@
   function connectivityBanner(){
     let el=document.getElementById('vpConnectivity');
     if(!el){el=document.createElement('div');el.id='vpConnectivity';el.className='vp-connectivity';document.body.appendChild(el)}
-    el.hidden=!offlineMode;el.innerHTML='<strong>Modo offline</strong><span>Exibindo o último backup local. Alterações serão liberadas quando a conexão voltar.</span>';
+    el.hidden=!offlineMode;el.innerHTML='<strong>Modo offline seguro</strong><span>Você pode consultar o último backup local. Alterações financeiras, planos e acessos exigem conexão para evitar conflitos.</span>';
   }
   window.addEventListener('online',async()=>{offlineMode=false;connectivityBanner();try{if(token&&me){await loadPersonal();render();toast('Conexão restabelecida. Dados sincronizados.')}}catch{}});
   window.addEventListener('offline',()=>{offlineMode=true;connectivityBanner()});
