@@ -85,6 +85,7 @@ jobs:
           node scripts/test-finance-v18.mjs
           npm run release:check
           node scripts/test-finalization-v19.mjs
+          node scripts/test-rest-extra-v21.mjs
       - name: Prepare Vaz Personal native bundle
         run: node scripts/build-personal-native-v2.mjs
       - name: Validate native bundle
