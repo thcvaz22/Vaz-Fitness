@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 1000" role="img" aria-labelledby="title desc">
+<title id="title">Guia corporal para medições</title><desc id="desc">Homem de corpo inteiro em posição frontal com marcações horizontais de peito, cintura, quadril, braço e coxa.</desc>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbfbf8"/><stop offset="1" stop-color="#f1f1ec"/></linearGradient>
+  <linearGradient id="skin" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d7a07e"/><stop offset=".48" stop-color="#bc7f60"/><stop offset="1" stop-color="#996048"/></linearGradient>
+  <linearGradient id="skinLight" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e0ad8b"/><stop offset="1" stop-color="#aa7054"/></linearGradient>
+  <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity=".12"/></filter>
+  <filter id="soft"><feGaussianBlur stdDeviation="5"/></filter>
+</defs>
+<rect width="600" height="1000" rx="42" fill="url(#bg)"/>
+<ellipse cx="300" cy="930" rx="155" ry="27" fill="#000" opacity=".07" filter="url(#soft)"/>
+<g filter="url(#shadow)">
+  <ellipse cx="300" cy="142" rx="63" ry="76" fill="url(#skinLight)"/>
+  <path d="M255 120c9-51 85-69 102-9 5 18 1 32-1 39-10-24-31-37-58-37-18 0-32 5-43 15Z" fill="#2f251f"/>
+  <path d="M274 204c6 27 46 27 52 0v58h-52Z" fill="url(#skin)"/>
+  <path d="M214 260c22-31 55-43 86-43s64 12 86 43c23 33 28 102 19 154-7 39-19 73-27 104H222c-8-31-20-65-27-104-9-52-4-121 19-154Z" fill="url(#skinLight)"/>
+  <path d="M231 315c21 14 44 21 69 21s48-7 69-21c-6 54-9 116-7 190H238c2-74-1-136-7-190Z" fill="#b97c5e" opacity=".26"/>
+  <path d="M210 278c-29 42-46 96-52 159l-17 180c-2 24 8 42 25 45 18 3 31-12 35-34l27-169 13-136Z" fill="url(#skin)"/>
+  <path d="M390 278c29 42 46 96 52 159l17 180c2 24-8 42-25 45-18 3-31-12-35-34l-27-169-13-136Z" fill="url(#skin)"/>
+  <ellipse cx="162" cy="662" rx="25" ry="36" fill="url(#skinLight)"/>
+  <ellipse cx="438" cy="662" rx="25" ry="36" fill="url(#skinLight)"/>
+  <path d="M223 505c-9 45-14 94-11 144l15 231c2 31 18 49 40 48 20-1 31-20 32-47l7-230 2-146Z" fill="url(#skinLight)"/>
+  <path d="M377 505c9 45 14 94 11 144l-15 231c-2 31-18 49-40 48-20-1-31-20-32-47l-7-230-2-146Z" fill="url(#skinLight)"/>
+  <path d="M221 500h158c7 35 7 68-2 103-43 23-111 23-154 0-9-35-9-68-2-103Z" fill="#202020"/>
+  <path d="M230 605c20 13 42 18 70 18s50-5 70-18l-6 57c-39 17-89 17-128 0Z" fill="#2b2b2b"/>
+  <path d="M252 928h42v29c-15 13-42 12-64 6 0-18 7-28 22-35Z" fill="#2b2b2b"/>
+  <path d="M348 928h-42v29c15 13 42 12 64 6 0-18-7-28-22-35Z" fill="#2b2b2b"/>
+</g>
+<g fill="none" stroke="#f2c400" stroke-width="8" stroke-linecap="round" opacity=".96">
+  <path d="M217 340H383"/>
+  <path d="M222 430H378"/>
+  <path d="M214 515H386"/>
+  <path d="M148 370H213"/>
+  <path d="M218 690H300"/>
+</g>
+<g fill="#171717" font-family="Inter,Arial,sans-serif" font-weight="800" font-size="19">
+  <g transform="translate(398 329)"><rect width="112" height="34" rx="17" fill="#fff" opacity=".94"/><text x="15" y="23">Peitoral</text></g>
+  <g transform="translate(393 419)"><rect width="108" height="34" rx="17" fill="#fff" opacity=".94"/><text x="15" y="23">Cintura</text></g>
+  <g transform="translate(398 504)"><rect width="104" height="34" rx="17" fill="#fff" opacity=".94"/><text x="15" y="23">Quadril</text></g>
+  <g transform="translate(49 359)"><rect width="98" height="34" rx="17" fill="#fff" opacity=".94"/><text x="15" y="23">Braço</text></g>
+  <g transform="translate(308 679)"><rect width="90" height="34" rx="17" fill="#fff" opacity=".94"/><text x="15" y="23">Coxa</text></g>
+</g>
+<g fill="#f2c400" stroke="#fff" stroke-width="5"><circle cx="300" cy="340" r="10"/><circle cx="300" cy="430" r="10"/><circle cx="300" cy="515" r="10"/><circle cx="181" cy="370" r="10"/><circle cx="260" cy="690" r="10"/></g>
+</svg>
