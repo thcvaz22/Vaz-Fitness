@@ -1,6 +1,6 @@
 {
-  "version": "0.5.7",
-  "versionCode": 57,
-  "notes": "Biblioteca ampliada para 154 exercícios e mídias personalizadas com imagens inicial/final, vídeo e instruções nos dois apps.",
+  "version": "0.5.8",
+  "versionCode": 58,
+  "notes": "Configurações e identidade visual finalizadas com ações rápidas compactas, galeria de 20 ícones, prévia em tempo real e sincronização completa com o Vaz Fitness.",
   "downloadUrl": "https://github.com/thcvaz22/Vaz-Fitness/releases/download/vaz-apps-latest/Vaz-Personal.apk"
 }

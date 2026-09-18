@@ -26,6 +26,7 @@ on:
       - 'scripts/test-exercise-picker-v14.mjs'
       - 'scripts/test-today-center-v15.mjs'
       - 'scripts/test-exercise-library-v16.mjs'
+      - 'scripts/test-settings-brand-v17.mjs'
       - 'vercel.json'
       - 'package.json'
       - '.github/workflows/android-personal-debug.yml'
@@ -75,6 +76,7 @@ jobs:
           node scripts/test-personal-fitness-access.mjs
           node scripts/test-plan-history-v13.mjs
           node scripts/test-exercise-library-v16.mjs
+          node scripts/test-settings-brand-v17.mjs
       - name: Prepare Vaz Personal native bundle
         run: node scripts/build-personal-native-v2.mjs
       - name: Validate native bundle
