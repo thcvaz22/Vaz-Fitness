@@ -2,7 +2,7 @@
   "version": "0.6.4",
   "versionCode": 64,
   "releasedAt": "2026-09-18",
-  "notes": "Correção do remanejamento de descanso: substitui dias antigos, invalida remanejamentos semanais obsoletos e o calendário só marca como Descanso os dias atualmente selecionados.",
+  "notes": "Correção do remanejamento de descansos: novos dias substituem os antigos sem acumular, overrides semanais são invalidados imediatamente e a nuvem não restaura descanso desatualizado.",
   "apps": {
     "fitness": {
       "appId": "com.vazfitness.app",
