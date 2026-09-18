@@ -8,6 +8,7 @@ on:
       - 'app-*.js'
       - 'index.html'
       - 'styles.css'
+      - 'assets/**'
       - 'icon.svg'
       - 'native-entry.js'
       - 'capacitor.config.json'
@@ -50,6 +51,7 @@ jobs:
           node scripts/test-finance-v18.mjs
           npm run release:check
           node scripts/test-finalization-v19.mjs
+          node scripts/test-rest-extra-v21.mjs
       - name: Prepare native web bundle
         run: npm run native:prepare
       - name: Validate packaged experience
