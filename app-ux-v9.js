@@ -254,11 +254,41 @@
     const pts=nums.map((v,i)=>`${p+(w-2*p)*(i/(nums.length-1))},${h-p-(h-2*p)*((v-min)/span)}`).join(' ');
     return `<svg class="v9-trend" viewBox="0 0 ${w} ${h}" role="img" aria-label="Evolução do peso"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="v9-trend-labels"><span>${nums[0].toFixed(1)} kg</span><strong>${nums.at(-1).toFixed(1)} kg</strong></div>`;
   }
+  const measureGuidePartsV13=[
+    {id:'chest',label:'Peitoral',pos:'50% 24%',hot:'50,24',text:'Passe a fita ao redor do tórax na linha dos mamilos, paralela ao chão, com os braços relaxados.'},
+    {id:'waist',label:'Cintura',pos:'50% 39%',hot:'50,39',text:'Use a linha do umbigo ou o mesmo ponto definido na primeira avaliação. Não prenda a respiração e não aperte a fita.'},
+    {id:'hip',label:'Quadril',pos:'50% 50%',hot:'50,50',text:'Meça a região mais larga dos glúteos. A fita deve permanecer horizontal em toda a volta.'},
+    {id:'arm',label:'Braço',pos:'31% 31%',hot:'31,31',text:'Com o braço relaxado ao lado do corpo, meça o ponto médio entre ombro e cotovelo. A fita envolve o braço na horizontal.'},
+    {id:'thigh',label:'Coxa',pos:'46% 68%',hot:'46,68',text:'Meça sempre no mesmo ponto entre a virilha e a patela, com a perna relaxada e a fita paralela ao chão.'}
+  ];
+  function renderMeasureGuideV13(){
+    const first=measureGuidePartsV13[0];
+    return `<div class="v13-measure-guide" data-measure-root>
+      <div class="v13-measure-main">
+        <img src="assets/body-measurement-guide-v3.png" alt="Homem inteiro em retrato demonstrando os pontos de medição corporal">
+        ${measureGuidePartsV13.map(p=>{const [x,y]=p.hot.split(',');return `<button type="button" class="v13-measure-hotspot" style="left:${x}%;top:${y}%" data-measure-part="${p.id}" aria-label="Ver como medir ${p.label}"><span></span><small>${p.label}</small></button>`}).join('')}
+      </div>
+      <div class="v13-measure-thumbs" aria-label="Escolha a região para ver em detalhe">
+        ${measureGuidePartsV13.map((p,i)=>`<button type="button" class="v13-measure-thumb ${i===0?'active':''}" data-measure-part="${p.id}"><span class="v13-measure-thumb-img" style="background-position:${p.pos}"></span><strong>${p.label}</strong></button>`).join('')}
+      </div>
+      <div class="v13-measure-detail" data-measure-detail>
+        <div class="v13-measure-crop" data-measure-crop style="background-position:${first.pos}" data-part="${first.id}"><i data-measure-line></i></div>
+        <div><span class="eyebrow">COMO MEDIR</span><h3 data-measure-title>${first.label}</h3><p data-measure-text>${first.text}</p><small>Fita firme, sem comprimir a pele. Repita sempre no mesmo ponto e em condições semelhantes.</small></div>
+      </div>
+    </div>`;
+  }
+  function selectMeasureGuideV13(id){
+    const part=measureGuidePartsV13.find(x=>x.id===id)||measureGuidePartsV13[0],root=document.querySelector('[data-measure-root]');if(!root)return;
+    root.querySelectorAll('[data-measure-part]').forEach(b=>b.classList.toggle('active',b.dataset.measurePart===part.id));
+    const crop=root.querySelector('[data-measure-crop]');if(crop){crop.style.backgroundPosition=part.pos;crop.dataset.part=part.id}
+    const title=root.querySelector('[data-measure-title]'),text=root.querySelector('[data-measure-text]');if(title)title.textContent=part.label;if(text)text.textContent=part.text;
+  }
+
   function renderMetricsPage(){
     ensureV9State();const last=latestMeasurement()||{},box=extractProgress(),aion=box.querySelector('.coach-aion-progress');
     if(aion)aion.querySelectorAll('[data-goals-edit]').forEach(x=>x.remove());
     const due=metricReminderDue();
-    return `<section class="v9-page v9-metrics-page"><div class="workout-hero"><div><span class="eyebrow">MÉTRICAS</span><h1>Acompanhe mudanças reais do seu corpo.</h1><p>Registre sempre em condições semelhantes. A AION usa tendência, não uma medida isolada.</p></div><button class="btn primary" data-body-register>+ Nova medição</button></div>${due?`<div class="v9-metric-due"><strong>Seu ciclo terminou.</strong><span>Faça uma nova medição para comparar o resultado deste ciclo e criar uma referência para o próximo.</span><button class="btn dark" data-body-register>Registrar agora</button></div>`:''}<div class="card"><div class="card-head"><div><h2>Evolução corporal</h2><p>Último registro: ${last.date?new Date(last.date+'T12:00:00').toLocaleDateString('pt-BR'):'ainda não realizado'}</p></div></div><div class="v9-metric-grid">${[['Peso',last.weight,'kg'],['Cintura',last.waist,'cm'],['Peitoral',last.chest,'cm'],['Quadril',last.hip,'cm'],['Braço',last.arm,'cm'],['Coxa',last.thigh,'cm'],['Gordura',last.bodyFat,'%']].map(([l,v,u])=>`<div><span>${l}</span><strong>${v?`${Number(v).toFixed(1)} ${u}`:'—'}</strong></div>`).join('')}</div><div class="v9-trend-wrap">${measurementTrend()}</div></div><div class="card v9-measure-help" style="margin-top:18px"><div class="card-head"><div><span class="eyebrow">GUIA AION</span><h2>Como medir do mesmo jeito toda vez</h2><p>Use fita métrica flexível, sem apertar a pele, de preferência no mesmo horário e condições.</p></div></div><figure class="v10-measure-figure"><img src="assets/body-measurement-guide-v3.png" alt="Guia realista de medição de peito, cintura, quadril, braço e coxa com fita métrica"><figcaption><span>Peitoral</span><span>Cintura</span><span>Quadril</span><span>Braço</span><span>Coxa</span></figcaption></figure><div class="v10-measure-instructions"><p><strong>Peitoral:</strong> fita na linha dos mamilos, paralela ao chão e braços relaxados.</p><p><strong>Cintura:</strong> linha do umbigo ou o mesmo ponto definido na primeira avaliação.</p><p><strong>Quadril:</strong> região mais larga dos glúteos, mantendo a fita horizontal.</p><p><strong>Braço:</strong> relaxado, no ponto médio entre ombro e cotovelo.</p><p><strong>Coxa:</strong> ponto médio fixo entre virilha e patela.</p></div><div class="v9-aion-measure-note"><strong>💡 Dica da AION</strong><span>Evite comparar medidas feitas depois do treino com medidas em repouso. Hidratação, alimentação e horário mudam o resultado.</span></div></div>${aion?`<div style="margin-top:18px">${aion.outerHTML}</div>`:''}</section>`;
+    return `<section class="v9-page v9-metrics-page"><div class="workout-hero"><div><span class="eyebrow">MÉTRICAS</span><h1>Acompanhe mudanças reais do seu corpo.</h1><p>Registre sempre em condições semelhantes. A AION usa tendência, não uma medida isolada.</p></div><button class="btn primary" data-body-register>+ Nova medição</button></div>${due?`<div class="v9-metric-due"><strong>Seu ciclo terminou.</strong><span>Faça uma nova medição para comparar o resultado deste ciclo e criar uma referência para o próximo.</span><button class="btn dark" data-body-register>Registrar agora</button></div>`:''}<div class="card"><div class="card-head"><div><h2>Evolução corporal</h2><p>Último registro: ${last.date?new Date(last.date+'T12:00:00').toLocaleDateString('pt-BR'):'ainda não realizado'}</p></div></div><div class="v9-metric-grid">${[['Peso',last.weight,'kg'],['Cintura',last.waist,'cm'],['Peitoral',last.chest,'cm'],['Quadril',last.hip,'cm'],['Braço',last.arm,'cm'],['Coxa',last.thigh,'cm'],['Gordura',last.bodyFat,'%']].map(([l,v,u])=>`<div><span>${l}</span><strong>${v?`${Number(v).toFixed(1)} ${u}`:'—'}</strong></div>`).join('')}</div><div class="v9-trend-wrap">${measurementTrend()}</div></div><div class="card v9-measure-help" style="margin-top:18px"><div class="card-head"><div><span class="eyebrow">GUIA AION</span><h2>Como medir do mesmo jeito toda vez</h2><p>Use fita métrica flexível, sem apertar a pele, de preferência no mesmo horário e condições.</p></div></div>${renderMeasureGuideV13()}<div class="v9-aion-measure-note"><strong>💡 Dica da AION</strong><span>Evite comparar medidas feitas depois do treino com medidas em repouso. Hidratação, alimentação e horário mudam o resultado.</span></div></div>${aion?`<div style="margin-top:18px">${aion.outerHTML}</div>`:''}</section>`;
   }
 
   function openGoalDialogV9(){
@@ -311,6 +341,7 @@
     document.querySelectorAll('[data-v9-goal-complete]').forEach(b=>b.onclick=()=>completeManualGoal(b.dataset.v9GoalComplete));
     document.querySelectorAll('[data-v9-goal-remove]').forEach(b=>b.onclick=()=>removeGoal(b.dataset.v9GoalRemove));
     document.querySelectorAll('[data-body-register]').forEach(b=>b.onclick=openMeasurementDialogV9);
+    document.querySelectorAll('[data-measure-part]').forEach(b=>b.onclick=()=>selectMeasureGuideV13(b.dataset.measurePart));
   }
 
   const priorBindDynamic=bindDynamic;
@@ -340,4 +371,9 @@
   document.head.appendChild(style);
 
   queueMicrotask(()=>{try{render()}catch{}});
+  const measureGuideStyleV13=document.createElement('style');measureGuideStyleV13.textContent=`
+    .v13-measure-guide{display:grid;grid-template-columns:minmax(240px,.95fr) minmax(280px,1.05fr);gap:18px;align-items:start}.v13-measure-main{position:relative;min-height:460px;border:1px solid var(--line);border-radius:22px;background:#f8f8f6;overflow:hidden;display:grid;place-items:center}.v13-measure-main>img{width:100%;height:100%;max-height:590px;object-fit:contain;object-position:center}.v13-measure-hotspot{position:absolute;transform:translate(-50%,-50%);border:0;background:transparent;display:flex;align-items:center;gap:5px;cursor:pointer;padding:6px}.v13-measure-hotspot>span{width:15px;height:15px;border-radius:50%;background:var(--yellow);border:3px solid #fff;box-shadow:0 0 0 2px rgba(0,0,0,.22)}.v13-measure-hotspot small{opacity:0;transform:translateX(-4px);transition:.18s;background:#171717;color:#fff;border-radius:999px;padding:4px 7px;font-size:8px;font-weight:900;white-space:nowrap}.v13-measure-hotspot:hover small,.v13-measure-hotspot.active small{opacity:1;transform:none}.v13-measure-thumbs{grid-column:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}.v13-measure-thumb{border:1px solid var(--line);background:#fff;border-radius:14px;padding:6px;min-width:0;cursor:pointer}.v13-measure-thumb.active{border-color:#b99500;box-shadow:0 0 0 2px rgba(246,203,34,.25)}.v13-measure-thumb-img{height:58px;border-radius:9px;display:block;background-image:url('assets/body-measurement-guide-v3.png');background-size:330%;background-repeat:no-repeat;background-color:#f4f4f2}.v13-measure-thumb strong{display:block;font-size:8px;margin-top:5px;overflow:hidden;text-overflow:ellipsis}.v13-measure-detail{grid-column:2;grid-row:1/3;border:1px solid var(--line);border-radius:22px;padding:14px;background:#fff;display:grid;grid-template-rows:minmax(280px,1fr) auto;gap:14px;min-height:540px}.v13-measure-crop{position:relative;border-radius:17px;background-image:url('assets/body-measurement-guide-v3.png');background-size:285%;background-repeat:no-repeat;background-color:#f5f5f2;overflow:hidden}.v13-measure-crop i{position:absolute;left:20%;top:50%;width:60%;height:3px;background:#f6cb22;box-shadow:0 0 0 1px rgba(0,0,0,.22);border-radius:999px}.v13-measure-crop[data-part="arm"] i{left:18%;top:48%;width:64%;height:3px;transform:none}.v13-measure-detail h3{font-size:22px;margin:4px 0 7px}.v13-measure-detail p{font-size:12px;line-height:1.58;margin:0 0 8px;color:#3f3f3f}.v13-measure-detail small{font-size:9px;color:var(--muted);line-height:1.45}.v13-measure-main:after{content:'Toque nos pontos do corpo';position:absolute;left:12px;bottom:12px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:999px;padding:6px 9px;font-size:8px;font-weight:900}
+    @media(max-width:760px){.v13-measure-guide{grid-template-columns:1fr}.v13-measure-main{min-height:430px}.v13-measure-thumbs{grid-column:1;grid-row:2;overflow-x:auto;display:flex;padding-bottom:3px}.v13-measure-thumb{flex:0 0 82px}.v13-measure-detail{grid-column:1;grid-row:3;min-height:430px}.v13-measure-crop{min-height:290px}}
+  `;document.head.appendChild(measureGuideStyleV13);
+
 })();
