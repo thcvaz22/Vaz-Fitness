@@ -23,7 +23,7 @@
   function sessionDate(s){return s?.localDate||key(s?.date||Date.now())}
   function skipDate(s){return s?.occurrenceDate||(/^\d{4}-\d{2}-\d{2}$/.test(String(s?.date||''))?s.date:key(s?.date))}
   function skipPlanId(s){return s?.planId||s?.id||''}
-  function completed(date,planId){return [...(state.sessions||[]),...(state.runSessions||[])].some(s=>sessionDate(s)===date&&(String(s.planId||'')===String(planId)||String(s.basePlanId||'')===String(planId)))}
+  function completed(date,planId){return [...(state.sessions||[]),...(state.runSessions||[])].some(s=>!s.extraWorkout&&sessionDate(s)===date&&(String(s.planId||'')===String(planId)||String(s.basePlanId||'')===String(planId)))}
   function skipped(date,planId){return (state.skipped||[]).some(s=>skipDate(s)===date&&String(skipPlanId(s))===String(planId))}
   function overrides(){return state.weekOverrides&&typeof state.weekOverrides==='object'?state.weekOverrides:{}}
   function baseWeekEntries(wk){
@@ -138,7 +138,7 @@
     const y=cursor.getFullYear(),m=cursor.getMonth(),prefix=`${y}-${pad(m+1)}-`,out=[];
     const c=cycle();for(let d=new Date(c.start);key(d)<=key(c.end);d=addDays(d,1)){const dk=key(d);if(!dk.startsWith(prefix))continue;entriesForDate(dk).forEach(e=>out.push(eventForEntry(e)))}
     (state.skipped||[]).forEach(s=>{const dk=skipDate(s);if(!dk?.startsWith(prefix))return;const pid=skipPlanId(s);if(out.some(e=>e.date===dk&&String(e.planId)===String(pid)))return;const p=(state.plan||[]).find(x=>String(x.id)===String(pid));if(p)out.push({date:dk,plan:p,planId:pid,name:p.name,type:p.type,status:'skipped',kind:'planned',mode:'skipped'})});
-    [...(state.sessions||[]),...(state.runSessions||[])].forEach(s=>{const dk=sessionDate(s);if(!dk.startsWith(prefix)||s.planId)return;out.push({date:dk,plan:s,planId:null,name:s.name||'Atividade adicional',type:s.distance!=null?'run':'strength',status:'additional',kind:'additional'})});
+    [...(state.sessions||[]),...(state.runSessions||[])].forEach(s=>{const dk=sessionDate(s);if(!dk.startsWith(prefix)||(s.planId&&!s.extraWorkout))return;out.push({date:dk,plan:s,planId:null,name:s.name||'Atividade adicional',type:s.distance!=null?'run':'strength',status:'additional',kind:'additional'})});
     return out;
   }
   function dayTone(events){if(events.some(e=>['missed','skipped'].includes(e.status)))return 'missed';const planned=events.filter(e=>e.kind==='planned');if(planned.length&&planned.every(e=>e.status==='done'))return 'done';if(planned.some(e=>e.status==='pending'))return 'planned';if(events.some(e=>e.status==='additional'))return 'additional';return ''}
