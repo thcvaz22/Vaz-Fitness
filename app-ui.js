@@ -59,8 +59,10 @@ function renderWorkout(){
 
 function startItem(id){
   const item=state.plan.find(x=>x.id===id); if(!item)return;
+  const pending=state.pendingExtraWorkout,extra=!!(pending&&String(pending.planId)===String(id)&&Date.now()-Number(pending.selectedAt||0)<30*60*1000);
   if(item.type==='run'){ startRun(item); return; }
-  state.current={planId:id,startedAt:Date.now(),exercises:item.exercises.map(e=>({...e,completedSets:[],effort:null})),currentIndex:0};
+  state.current={planId:id,startedAt:Date.now(),exercises:item.exercises.map(e=>({...e,completedSets:[],effort:null})),currentIndex:0,extraWorkout:extra,executedOnRestDay:extra&&!!pending.executedOnRestDay,originalPlanDay:item.day,originalPlanId:item.id};
+  if(extra)state.pendingExtraWorkout=null;
   currentExerciseIndex=0; seconds=0; save(); activeView='workout'; startTimer(); render();
 }
 function startTimer(){clearInterval(workoutTimer);workoutTimer=setInterval(()=>{seconds++;const el=document.getElementById('liveTimer');if(el)el.textContent=formatTime(seconds)},1000)}
