@@ -1,8 +1,8 @@
 {
-  "version": "0.6.4",
-  "versionCode": 64,
+  "version": "0.6.5",
+  "versionCode": 65,
   "releasedAt": "2026-09-18",
-  "notes": "Correção do remanejamento de descansos: novos dias substituem os antigos sem acumular, overrides semanais são invalidados imediatamente e a nuvem não restaura descanso desatualizado.",
+  "notes": "Confirmação de remanejamento integrada ao Vaz Fitness, sem popup do navegador, herdando automaticamente cores, contraste, nome e ícone/logo definidos pelo personal.",
   "apps": {
     "fitness": {
       "appId": "com.vazfitness.app",
