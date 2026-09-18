@@ -3,13 +3,14 @@ import {readFile} from 'node:fs/promises';
 
 const root=new URL('../',import.meta.url);
 const read=path=>readFile(new URL(path,root),'utf8');
-const [personal,student,styles,api,index,versionText]=await Promise.all([
+const [personal,student,styles,api,index,versionText,releaseText]=await Promise.all([
   read('personal/visual-system-v11.js'),
   read('app-branding.js'),
   read('styles.css'),
   read('api/branding.js'),
   read('index.html'),
-  read('personal/version.json')
+  read('personal/version.json'),
+  read('release.json')
 ]);
 
 const home=personal.slice(personal.indexOf('renderHome=function'),personal.indexOf('const oldRenderSettings'));
@@ -50,8 +51,8 @@ assert.match(api,/FROM vf_athlete_access/,'branding não localiza o personal do 
 assert.match(api,/getBrand\(auth\.sql,access\.personal_id\)/,'aluno vinculado não recebe a marca do personal');
 assert.match(api,/ON CONFLICT \(personal_id\) DO UPDATE/,'branding não possui atualização persistente');
 
-const version=JSON.parse(versionText);
-assert.equal(version.version,'0.6.1');
-assert.equal(version.versionCode,61);
+const version=JSON.parse(versionText),release=JSON.parse(releaseText);
+assert.equal(version.version,release.version);
+assert.equal(version.versionCode,release.versionCode);
 
 console.log('Configurações e identidade visual: 33 verificações concluídas.');
