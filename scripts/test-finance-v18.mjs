@@ -68,7 +68,7 @@ for(const source of [index,indexV2]){
 }
 assert.match(sw,/finance-v18\.css/);
 assert.match(sw,/finance-v18\.js/);
-assert.match(sw,/vaz-personal-v23-mobile-cards/,'nova interface móvel precisa renovar o cache do Vaz Personal');
+assert.match(sw,/vaz-personal-v24-aion-action-plan/,'nova interface móvel precisa renovar o cache do Vaz Personal');
 assert.match(build,/finance-v18\.css/);
 assert.match(build,/finance-v18\.js/);
 assert.match(css,/\.vp-student-finance-grid/);
