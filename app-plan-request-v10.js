@@ -66,7 +66,7 @@
     if(!allowed.length)return toast('Selecione menos dias de descanso.');
     if(!workouts.length)return toast('Não há treinos pendentes para remanejar.');
     if(!confirm('Remanejar os dias dos treinos pendentes mantendo exatamente os mesmos exercícios e prescrições?'))return;
-    workouts.forEach((item,index)=>{item.day=allowed[index%allowed.length]});
+    workouts.forEach((item,index)=>{item.day=allowed[index%allowed.length];delete item.scheduledDate});
     save();
     try{window.VazCalendar?.reconcile?.()}catch{}
     try{await window.VazCloudSync?.syncNow?.()}catch{}
