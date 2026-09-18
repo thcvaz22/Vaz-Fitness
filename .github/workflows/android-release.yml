@@ -24,8 +24,8 @@ jobs:
   signed-release:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: 0.5.6
-      APP_VERSION_CODE: 56
+      APP_VERSION_NAME: 0.5.7
+      APP_VERSION_CODE: 57
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -48,8 +48,10 @@ jobs:
           node --check personal/plan-request-workflow-v12.js
           node --check personal/plan-history-v13.js
           node --check personal/training-library-v2.js
+          node --check personal/exercise-catalog-v5.js
           node --check personal/coach-tools-v4.js
           node scripts/test-exercise-picker-v14.mjs
+          node scripts/test-exercise-library-v16.mjs
           node --check personal/today-center-v15.js
           node scripts/test-today-center-v15.mjs
           node --check personal/safety-v9.js
@@ -99,7 +101,7 @@ jobs:
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Vaz-Apps-Android-Release-0.5.6
+          name: Vaz-Apps-Android-Release-0.5.7
           path: |
             Vaz-Personal.apk
             Vaz-Fitness.apk
@@ -108,6 +110,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view vaz-apps-latest >/dev/null 2>&1 || gh release create vaz-apps-latest --title "Vaz Apps Android 0.5.6" --notes "Versões oficiais assinadas do Vaz Fitness e Vaz Personal."
-          gh release edit vaz-apps-latest --title "Vaz Apps Android 0.5.6" --notes "Versões oficiais assinadas do Vaz Fitness e Vaz Personal."
+          gh release view vaz-apps-latest >/dev/null 2>&1 || gh release create vaz-apps-latest --title "Vaz Apps Android 0.5.7" --notes "Versões oficiais assinadas do Vaz Fitness e Vaz Personal."
+          gh release edit vaz-apps-latest --title "Vaz Apps Android 0.5.7" --notes "Versões oficiais assinadas do Vaz Fitness e Vaz Personal."
           gh release upload vaz-apps-latest Vaz-Personal.apk Vaz-Fitness.apk --clobber

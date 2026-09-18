@@ -138,7 +138,7 @@
     };
   }
 
-  function pickerExercise(e){return {id:e.id,name:e.name,muscle:e.muscle,secondary:Array.isArray(e.secondary)?e.secondary:[],sets:Number(e.sets)||3,reps:e.reps||'8-12',load:0,rest:Number(e.rest)||60,icon:'🏋️',priority:false,equipment:e.equipment||'',instructions:e.instructions||'',videoUrl:e.videoUrl||null,imageUrl:e.imageUrl||null,mediaQuery:e.mediaQuery||e.name}}
+  function pickerExercise(e){return {id:e.id,name:e.name,muscle:e.muscle,secondary:Array.isArray(e.secondary)?e.secondary:[],sets:Number(e.sets)||3,reps:e.reps||'8-12',load:0,rest:Number(e.rest)||60,icon:'🏋️',priority:false,equipment:e.equipment||'',instructions:e.instructions||'',videoUrl:e.videoUrl||null,imageUrl:e.imageUrl||null,imageEndUrl:e.imageEndUrl||null,mediaQuery:e.mediaQuery||e.name}}
   function openCatalogPicker(di,ei=null){
     if(!exerciseCatalog.length){toast('Carregando biblioteca AION…');loadCatalog().then(()=>openCatalogPicker(di,ei));return}
     const muscles=Object.entries(muscleNames),equip=equipmentOptions();

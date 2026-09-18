@@ -2,7 +2,7 @@
 (()=>{
   const CACHE_PREFIX='vazPersonal.offline.v8:';
   const ALERT_KEY='vazPersonal.lastAlert.v8';
-  const APP_VERSION='0.5.6';
+  const APP_VERSION='0.5.7';
   const advancedApi=(action,o={})=>req('/api/personal-ops',{...o,params:{...(o.params||{}),action}});
   const cacheKey=(path,o)=>CACHE_PREFIX+btoa(unescape(encodeURIComponent(`${path}|${JSON.stringify(o?.params||{})}`))).replace(/=+$/,'');
   const getCache=key=>{try{return JSON.parse(localStorage.getItem(key)||'null')}catch{return null}};

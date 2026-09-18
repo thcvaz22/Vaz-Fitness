@@ -50,5 +50,5 @@ test('site, cache e Android incluem a central v15',()=>{
   for(const file of ['personal/index.html','personal/index-v2.html','personal/sw.js','scripts/build-personal-native-v2.mjs']){
     const content=source(file);assert.match(content,/today-center-v15\.js/);assert.match(content,/today-center-v15\.css/);
   }
-  assert.match(source('personal/version.json'),/"version": "0\.5\.6"/);
+  assert.ok(Number(JSON.parse(source('personal/version.json')).versionCode)>=56);
 });

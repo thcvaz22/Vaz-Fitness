@@ -1,6 +1,6 @@
 {
-  "version": "0.5.6",
-  "versionCode": 56,
-  "notes": "Central O que fazer hoje com prioridades acionáveis, filtros, adiamento e notificações configuráveis.",
+  "version": "0.5.7",
+  "versionCode": 57,
+  "notes": "Biblioteca ampliada para 154 exercícios e mídias personalizadas com imagens inicial/final, vídeo e instruções nos dois apps.",
   "downloadUrl": "https://github.com/thcvaz22/Vaz-Fitness/releases/download/vaz-apps-latest/Vaz-Personal.apk"
 }

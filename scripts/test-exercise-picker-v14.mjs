@@ -27,7 +27,7 @@ test('editor de plano padrão usa o mesmo fluxo pesquisável',()=>{
 test('seleção mantém prescrição e metadados do exercício',()=>{
   const code=source('personal/training-library-v2.js');
   assert.match(code,/function templateExercise\(base\)/);
-  for(const field of ['secondary','sets','reps','rest','instructions','videoUrl','imageUrl','equipment','mediaQuery'])assert.match(code,new RegExp(`${field}:`));
+  for(const field of ['secondary','sets','reps','rest','instructions','videoUrl','imageUrl','imageEndUrl','equipment','mediaQuery'])assert.match(code,new RegExp(`${field}:`));
 });
 
 test('recursos da busca entram no site, cache e pacote Android',()=>{
