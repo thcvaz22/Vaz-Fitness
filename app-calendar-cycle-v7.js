@@ -35,6 +35,7 @@
     return out;
   }
   function weekEntries(wk){
+    if(state.weekOverridesResetPending)return baseWeekEntries(wk);
     const o=overrides()[wk];
     if(o&&Array.isArray(o.entries))return o.entries.map(e=>({...clone(e),plan:{...clone(e.plan),status:'pending',basePlanId:e.plan?.basePlanId||e.plan?.id,_occurrenceDate:e.date}}));
     return baseWeekEntries(wk);
