@@ -6,6 +6,12 @@
   const trainingDays=()=>Math.max(2,Math.min(6,Number(state.profile.days)||4));
   const maxRestDays=()=>7-trainingDays();
   const isRestDayToday=()=>selectedRestDays().includes(new Date().getDay());
+  function applyPlanDayOverrides(){
+    const map=state.planDayOverrides&&typeof state.planDayOverrides==='object'?state.planDayOverrides:{},ids=new Set((state.plan||[]).map(x=>String(x.id)));
+    Object.keys(map).forEach(id=>{if(!ids.has(String(id)))delete map[id]});
+    (state.plan||[]).forEach(item=>{const day=Number(map[item.id]);if(Number.isInteger(day)&&day>=0&&day<=6&&Number(item.day)!==day){item.day=day;delete item.scheduledDate}});
+    state.planDayOverrides=map;
+  }
   const api=async(action,{method='GET',body=null}={})=>{
     const token=localStorage.getItem(TOKEN_KEY)||'';if(!token)throw new Error('Entre na sua conta para enviar a solicitação.');
     const r=await fetch(`${window.VAZ_API_BASE||''}/api/vf?action=${encodeURIComponent(action)}`,{method,headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:body?JSON.stringify(body):undefined});
@@ -66,7 +72,8 @@
     if(!allowed.length)return toast('Selecione menos dias de descanso.');
     if(!workouts.length)return toast('Não há treinos pendentes para remanejar.');
     if(!confirm('Remanejar os dias dos treinos pendentes mantendo exatamente os mesmos exercícios e prescrições?'))return;
-    workouts.forEach((item,index)=>{item.day=allowed[index%allowed.length];delete item.scheduledDate});
+    state.planDayOverrides=state.planDayOverrides&&typeof state.planDayOverrides==='object'?state.planDayOverrides:{};
+    workouts.forEach((item,index)=>{item.day=allowed[index%allowed.length];state.planDayOverrides[item.id]=item.day;delete item.scheduledDate});
     save();
     try{window.VazCalendar?.reconcile?.()}catch{}
     try{await window.VazCloudSync?.syncNow?.()}catch{}
@@ -113,6 +120,10 @@
     if(isRestDayToday()&&!valid){openExtraWorkoutDialog();return;}
     baseStartItem(id);
   };
+
+  applyPlanDayOverrides();
+  const baseRenderAll=render;
+  render=function(){applyPlanDayOverrides();return baseRenderAll();};
 
   const baseBind=bindDynamic;
   bindDynamic=function(){
