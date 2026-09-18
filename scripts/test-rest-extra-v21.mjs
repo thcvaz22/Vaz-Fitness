@@ -3,10 +3,10 @@ import {readFile} from 'node:fs/promises';
 
 const root=new URL('../',import.meta.url);
 const read=path=>readFile(new URL(path,root),'utf8');
-const [plan,training,running,calendar,cycle,ux,index,personalCss,visual,studentBrand,asset,remapHandler]=await Promise.all([
+const [plan,training,running,calendar,cycle,ux,index,personalCss,visual,studentBrand,asset,remapHandler,membership]=await Promise.all([
   read('app-plan-request-v10.js'),read('app-training.js'),read('app-running.js'),read('app-calendar.js'),read('app-calendar-cycle-v7.js'),
   read('app-ux-v9.js'),read('index.html'),read('personal/app-v2.css'),read('personal/visual-system-v11.js'),read('app-branding.js'),
-  read('assets/body-measurement-guide-v4.svg'),read('lib/remap-handler.js')
+  read('assets/body-measurement-guide-v4.svg'),read('lib/remap-handler.js'),read('app-membership.js')
 ]);
 
 assert.match(plan,/data-remap-workouts/,'Treinos precisa oferecer remanejamento');
@@ -20,6 +20,11 @@ assert.match(cycle,/restDay\?'Descanso':'Sem treino'/,'Calendário só pode cham
 assert.match(cycle,/weekOverridesResetPending/,'Sincronização não pode restaurar remanejamentos antigos enquanto a limpeza estiver pendente');
 assert.match(remapHandler,/action==='reset_overrides'/,'Backend deve permitir invalidar remanejamentos antigos do aluno');
 assert.match(remapHandler,/status:'superseded'/,'Solicitações antigas pendentes devem ser invalidadas ao trocar descanso');
+assert.match(plan,/restDaysUpdatedAt=Date\.now\(\)/,'Troca de descanso precisa registrar versão temporal local');
+assert.match(plan,/state\.remapRequests=\[\]/,'Troca de descanso deve limpar solicitações antigas');
+assert.match(cycle,/if\(state\.weekOverridesResetPending\)return baseWeekEntries\(wk\)/,'Calendário deve ignorar overrides antigos imediatamente');
+assert.match(membership,/localRestAt>remoteRestAt/,'Sincronização deve preservar descanso local mais recente');
+assert.match(membership,/localResetPending/,'Sincronização deve preservar limpeza local de overrides');
 
 assert.match(training,/extraWorkout:!!c\.extraWorkout/,'Musculação deve registrar flag extra');
 assert.match(training,/if\(item&&!c\.extraWorkout\)item\.status='done'/,'Treino extra de força não pode concluir o plano');
