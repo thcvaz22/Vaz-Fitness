@@ -72,9 +72,12 @@ assert.match(build,/finance-v18\.css/);
 assert.match(build,/finance-v18\.js/);
 assert.match(css,/\.vp-student-finance-grid/);
 assert.match(css,/\.vp-finance-ring/);
+assert.doesNotMatch(css,/^\.vp-finance-metric-grid\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}$/m,'grade financeira não pode sobrescrever o layout móvel');
+assert.match(css,/overflow-wrap:anywhere/,'valores financeiros longos precisam continuar visíveis');
+assert.match(css,/@media\(max-width:680px\)\{\.vp-finance-metric-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,'cards financeiros devem usar duas colunas no celular');
 
 const version=JSON.parse(versionText);
-assert.equal(version.version,'0.6.0');
-assert.equal(version.versionCode,60);
+assert.equal(version.version,'0.6.1');
+assert.equal(version.versionCode,61);
 
 console.log('Mensalidades e financeiro v18: 48 verificações concluídas.');
