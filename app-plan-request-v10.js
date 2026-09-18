@@ -71,12 +71,43 @@
     toast('Dias de descanso substituídos. Toque em “Remanejar treinos” para redistribuir o plano.');
   }
 
+  function confirmRemapWorkouts(){
+    return new Promise(resolve=>{
+      document.querySelector('#vfRemapConfirmDialog')?.remove();
+      const brand=document.querySelector('.brand-mark');
+      const brandHtml=brand?.innerHTML?.trim()||'↔';
+      const systemName=document.querySelector('.brand strong')?.textContent?.trim()||document.title||'Vaz Fitness';
+      const d=document.createElement('dialog');
+      d.id='vfRemapConfirmDialog';
+      d.className='dialog vf-brand-confirm';
+      d.innerHTML=`<div class="vf-brand-confirm-sheet">
+        <div class="vf-brand-confirm-head">
+          <div class="vf-brand-confirm-icon" aria-hidden="true">${brandHtml}</div>
+          <div><span class="eyebrow">${escapeHtml(systemName)}</span><h2>Remanejar treinos?</h2></div>
+        </div>
+        <p>Os dias dos treinos serão redistribuídos conforme seus novos dias de descanso, mantendo exatamente os mesmos exercícios e prescrições.</p>
+        <div class="vf-brand-confirm-note"><span>✓</span><div><strong>Seu treino não será recriado.</strong><small>Apenas os dias da semana serão reorganizados.</small></div></div>
+        <div class="vf-brand-confirm-actions">
+          <button type="button" class="btn vf-brand-cancel" data-remap-cancel>Cancelar</button>
+          <button type="button" class="btn vf-brand-confirm-btn" data-remap-confirm>Confirmar remanejamento</button>
+        </div>
+      </div>`;
+      const finish=value=>{if(d.open)try{d.close()}catch{};d.remove();resolve(value)};
+      d.addEventListener('cancel',event=>{event.preventDefault();finish(false)});
+      d.addEventListener('click',event=>{if(event.target===d)finish(false)});
+      d.querySelector('[data-remap-cancel]')?.addEventListener('click',()=>finish(false));
+      d.querySelector('[data-remap-confirm]')?.addEventListener('click',()=>finish(true));
+      document.body.appendChild(d);
+      d.showModal();
+    });
+  }
+
   async function remapWorkouts(){
     const rest=new Set(selectedRestDays()),allowed=[1,2,3,4,5,6,0].filter(d=>!rest.has(d));
     const workouts=(state.plan||[]).filter(x=>x&&x.status!=='abandoned'&&['strength','run'].includes(x.type));
     if(!allowed.length)return toast('Selecione menos dias de descanso.');
     if(!workouts.length)return toast('Não há treinos no plano para remanejar.');
-    if(!confirm('Remanejar os dias dos treinos mantendo exatamente os mesmos exercícios e prescrições?'))return;
+    if(!await confirmRemapWorkouts())return;
     state.planDayOverrides={};
     state.weekOverrides={};
     state.remapRequests=[];
@@ -152,7 +183,8 @@
     .vf-rest-profile,.vf-request-rest>div{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}.vf-rest-profile label,.vf-request-rest label{margin:0;min-width:0}.vf-rest-profile input,.vf-request-rest input{position:absolute;opacity:0}.vf-rest-profile span,.vf-request-rest label span{display:grid;place-items:center;padding:10px 3px;border:1px solid var(--line);border-radius:12px;font-size:10px;font-weight:850}.vf-rest-profile input:checked+span,.vf-request-rest input:checked+span{background:#191919;color:#fff;border-color:#191919}
     .vf-training-rest-card{margin:14px 0 18px}.vf-rest-card-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px}.vf-rest-card-foot small{display:block;color:var(--muted);line-height:1.45;max-width:650px}.vf-rest-today{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:13px;border:1px solid #ead273;background:#fff9df;border-radius:16px}.vf-rest-today strong,.vf-rest-today span{display:block}.vf-rest-today strong{font-size:12px}.vf-rest-today span{font-size:10px;color:var(--muted);line-height:1.45;margin-top:3px}
     .vf-request-dialog{width:min(650px,calc(100% - 20px));padding:22px}.vf-request-head{display:flex;justify-content:space-between;gap:12px}.vf-request-head h2{font-size:26px;margin:6px 0}.vf-request-head p{color:var(--muted);line-height:1.5}.vf-request-dialog textarea{width:100%;border:1px solid var(--line);border-radius:14px;padding:12px;font:inherit;resize:vertical;margin-top:6px}.vf-request-rest{border:1px solid var(--line);border-radius:16px;padding:13px;margin:14px 0}.vf-request-rest legend{font-weight:850;padding:0 5px}.vf-confirm-request{margin-top:12px}
+    .vf-brand-confirm{width:min(520px,calc(100% - 24px));padding:0;background:transparent;box-shadow:none}.vf-brand-confirm::backdrop{background:rgba(10,10,10,.58);backdrop-filter:blur(8px)}.vf-brand-confirm-sheet{background:var(--white,#fff);color:var(--ink,#222);border:1px solid var(--line,#ececec);border-radius:28px;padding:22px;box-shadow:0 28px 90px rgba(0,0,0,.28)}.vf-brand-confirm-head{display:flex;align-items:center;gap:13px}.vf-brand-confirm-head h2{font-size:24px;margin:3px 0 0;line-height:1.1}.vf-brand-confirm-head .eyebrow{color:var(--ink);opacity:.62;letter-spacing:.11em}.vf-brand-confirm-icon{width:52px;height:52px;flex:0 0 52px;border-radius:17px;background:var(--yellow);color:var(--brand-on-primary,#171717);display:grid;place-items:center;box-shadow:0 10px 26px var(--brand-primary-shadow,rgba(0,0,0,.12));font-weight:900}.vf-brand-confirm-icon svg{width:28px;height:28px}.vf-brand-confirm-sheet>p{font-size:13px;line-height:1.6;color:var(--muted);margin:18px 0}.vf-brand-confirm-note{display:flex;gap:10px;align-items:center;padding:12px;border-radius:16px;background:var(--yellow-soft);border:1px solid var(--line)}.vf-brand-confirm-note>span{width:31px;height:31px;border-radius:11px;background:var(--yellow);color:var(--brand-on-primary,#171717);display:grid;place-items:center;font-weight:950}.vf-brand-confirm-note strong,.vf-brand-confirm-note small{display:block}.vf-brand-confirm-note strong{font-size:11px}.vf-brand-confirm-note small{font-size:9px;color:var(--muted);margin-top:2px;line-height:1.4}.vf-brand-confirm-actions{display:grid;grid-template-columns:1fr 1.45fr;gap:9px;margin-top:18px}.vf-brand-cancel{background:var(--brand-accent-soft,#f3f3f3);color:var(--ink)}.vf-brand-confirm-btn{background:var(--yellow);color:var(--brand-on-primary,#171717);box-shadow:0 10px 25px var(--brand-primary-shadow,rgba(0,0,0,.12))}.vf-brand-confirm-btn:hover,.vf-brand-cancel:hover{transform:translateY(-1px)}
     .vf-extra-dialog{width:min(650px,calc(100% - 20px));padding:0;overflow:hidden}.vf-extra-sheet{padding:20px}.vf-extra-list{display:grid;gap:8px;margin-top:14px;max-height:58vh;overflow:auto}.vf-extra-option{width:100%;border:1px solid var(--line);background:#fff;border-radius:16px;padding:13px;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;color:var(--ink)}.vf-extra-option:hover{border-color:#d0ad00;background:#fffdf2}.vf-extra-option strong,.vf-extra-option small,.vf-extra-type{display:block}.vf-extra-option strong{font-size:13px;margin:3px 0}.vf-extra-option small{font-size:10px;color:var(--muted)}.vf-extra-type{font-size:8px;font-weight:900;letter-spacing:.08em;color:#876d00}.vf-extra-option b{font-size:10px;white-space:nowrap}
-    @media(max-width:600px){.vf-rest-profile,.vf-request-rest>div{grid-template-columns:repeat(4,minmax(0,1fr))}.vf-plan-request-status,.vf-rest-card-foot,.vf-rest-today{flex-direction:column;align-items:stretch}.vf-rest-card-foot .btn,.vf-rest-today .btn{width:100%}.vf-extra-sheet{padding:16px}.vf-extra-option{align-items:flex-start}.vf-extra-option b{display:none}}
+    @media(max-width:600px){.vf-brand-confirm-sheet{padding:18px}.vf-brand-confirm-actions{grid-template-columns:1fr}.vf-brand-confirm-btn{order:-1}.vf-rest-profile,.vf-request-rest>div{grid-template-columns:repeat(4,minmax(0,1fr))}.vf-plan-request-status,.vf-rest-card-foot,.vf-rest-today{flex-direction:column;align-items:stretch}.vf-rest-card-foot .btn,.vf-rest-today .btn{width:100%}.vf-extra-sheet{padding:16px}.vf-extra-option{align-items:flex-start}.vf-extra-option b{display:none}}
   `;document.head.appendChild(style);
 })();
