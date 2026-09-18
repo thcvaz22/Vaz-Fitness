@@ -32,6 +32,7 @@ const copies=[
   ['personal/plan-request-workflow-v12.js',`${out}/plan-request-workflow-v12.js`],
   ['personal/plan-history-v13.js',`${out}/plan-history-v13.js`],
   ['personal/today-center-v15.js',`${out}/today-center-v15.js`],
+  ['personal/aion-action-plan-v20.js',`${out}/aion-action-plan-v20.js`],
   ['personal/finance-v18.js',`${out}/finance-v18.js`],
   ['personal/sw.js',`${out}/sw.js`],
   ['personal/manifest.webmanifest',`${out}/manifest.webmanifest`],
