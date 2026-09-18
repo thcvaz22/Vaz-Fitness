@@ -10,6 +10,11 @@ const [plan,training,running,calendar,cycle,ux,index,personalCss,visual,studentB
 ]);
 
 assert.match(plan,/data-remap-workouts/,'Treinos precisa oferecer remanejamento');
+assert.doesNotMatch(plan,/confirm\('Remanejar os dias dos treinos/,'Remanejamento não deve usar confirmação nativa do navegador');
+assert.match(plan,/function confirmRemapWorkouts/,'Remanejamento precisa usar confirmação visual do sistema');
+assert.match(plan,/vf-brand-confirm/,'Confirmação deve ter modal próprio do Vaz Fitness');
+assert.match(plan,/data-remap-confirm/,'Modal precisa ter ação explícita de confirmação');
+assert.match(studentBrand,/--brand-on-primary/,'Identidade do aluno deve fornecer contraste dinâmico da cor primária');
 assert.match(plan,/delete item\.scheduledDate/,'Remanejamento deve recalcular data');
 assert.match(plan,/data-extra-workout-open/,'Dia de descanso precisa permitir treino extra');
 assert.match(plan,/pendingExtraWorkout/,'Escolha do treino extra precisa ser persistida até o início');
