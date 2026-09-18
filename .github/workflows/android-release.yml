@@ -69,6 +69,7 @@ jobs:
           node scripts/test-personal-fitness-access.mjs
           node scripts/test-plan-history-v13.mjs
           node scripts/test-finalization-v19.mjs
+          node scripts/test-rest-extra-v21.mjs
       - name: Decode permanent signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
