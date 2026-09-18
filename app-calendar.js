@@ -36,10 +36,10 @@
   function sessionDate(session){return session.localDate||localDateKey(session.date||Date.now());}
   function sessionEvent(session,type){
     const date=sessionDate(session);if(!date)return;
-    if(session.planId){
+    if(session.planId&&!session.extraWorkout){
       upsertEvent({id:`plan:${session.planId}`,planId:session.planId,date,name:session.name,type,kind:'planned',status:'done',duration:Number(session.duration)||0,sessionId:String(session.id),source:session.source||'app'});
     }else{
-      const additional=!!session.additional;
+      const additional=!!(session.additional||session.extraWorkout);
       upsertEvent({id:`session:${type}:${session.id}`,date,name:session.name||(type==='run'?'Corrida':'Musculação'),type,kind:additional?'additional':'completed',status:additional?'additional':'done',duration:Number(session.duration)||0,sessionId:String(session.id),source:session.source||'app'});
     }
   }
