@@ -93,6 +93,7 @@
       ${status==='abandoned'&&abandoned?`<div class="training-alert"><strong>Atividade abandonada</strong><span>${abandoned.completionPercent||0}% concluído.</span></div>`:''}
       ${['skipped','missed'].includes(status)?'<div class="training-alert danger"><strong>Corrida não realizada</strong><span>Esta sessão ficou registrada como falha no calendário.</span></div>':''}
       <div class="training-detail-metrics">${metric('Tempo previsto',`${plan?.duration||event?.duration||0} min`)}${metric('Pace sugerido',`${plan?.pace||'—'}/km`)}${metric('Intensidade',plan?.intensity||'—')}${metric('Status',statusText)}</div>
+      ${plan?.runStructure&&typeof window.renderStructuredRunPlan==='function'?window.renderStructuredRunPlan(plan.runStructure,{compact:true}):''}
     </article>`;
   }
 
