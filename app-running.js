@@ -42,6 +42,7 @@ function startRun(item){
     originalPlanDay:item.day,
     originalPlanId:item.id
   };
+  if(extra&&pending?.mode==='anticipate'&&pending?.anticipatedFromDate)window.VazCycleCalendar?.markAnticipated?.(pending.anticipatedFromDate,item);
   if(extra)state.pendingExtraWorkout=null;
   save();
   activeView='workout';
