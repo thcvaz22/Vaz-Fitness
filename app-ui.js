@@ -84,7 +84,7 @@ function startTimer(){clearInterval(workoutTimer);workoutTimer=setInterval(()=>{
 function formatTime(s){return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`}
 function renderLive(){
   const c=state.current; const ex=c.exercises[c.currentIndex]; if(!ex)return '';
-  return `<section class="live-shell"><div class="timer-head"><div><span class="eyebrow">TREINO AO VIVO</span><h2 style="margin:4px 0">${state.plan.find(x=>x.id===c.planId)?.name||'Treino'}</h2></div><div class="live-timer" id="liveTimer">${formatTime(seconds)}</div></div>
+  return `<section class="live-shell"><div class="timer-head"><div><span class="eyebrow">TREINO AO VIVO</span><h2 style="margin:4px 0">${c.name||state.plan.find(x=>x.id===c.planId)?.name||'Treino'}</h2></div><div class="live-timer" id="liveTimer">${formatTime(seconds)}</div></div>
   <div class="live-card"><span class="eyebrow">EXERCÍCIO ${c.currentIndex+1} DE ${c.exercises.length}</span><h1 class="exercise-title">${ex.name}</h1><div class="muscle-chips"><span>${muscleNames[ex.muscle]}</span>${ex.secondary.map(m=>`<span>${muscleNames[m]||m}</span>`).join('')}${ex.priority?'<span>★ prioridade</span>':''}</div>
   <div class="video-placeholder"><button class="play-btn" data-video-id="${ex.id}" title="Ver execução">▶</button><div class="video-label"><strong>Ver execução</strong><span>Ilustração animada + instruções</span></div></div>
   <div class="set-table">${Array.from({length:ex.sets},(_,i)=>renderSetRow(ex,i)).join('')}</div>
