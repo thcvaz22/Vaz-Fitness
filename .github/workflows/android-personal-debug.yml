@@ -67,6 +67,7 @@ jobs:
           node --check personal/today-center-v15.js
           node --check personal/aion-action-plan-v20.js
           node --check personal/client-360-v22.js
+          node --check personal/day-editor-v24.js
           node scripts/test-today-center-v15.mjs
           node --check api/personal-auth.js
           node --check api/health.js
@@ -102,6 +103,7 @@ jobs:
           test -f www-personal/today-center-v15.js
           test -f www-personal/aion-action-plan-v20.js
           test -f www-personal/client-360-v22.js
+          test -f www-personal/day-editor-v24.js
           test -f www-personal/today-center-v15.css
           test -f www-personal/finance-v18.js
           test -f www-personal/finance-v18.css
@@ -118,6 +120,7 @@ jobs:
           node --check www-personal/today-center-v15.js
           node --check www-personal/aion-action-plan-v20.js
           node --check www-personal/client-360-v22.js
+          node --check www-personal/day-editor-v24.js
           node --check www-personal/finance-v18.js
           grep -q "safety-v9.js" www-personal/index.html
           grep -q "exercise-gallery-v10.js" www-personal/index.html
@@ -129,6 +132,7 @@ jobs:
           grep -q "today-center-v15.js" www-personal/index.html
           grep -q "aion-action-plan-v20.js" www-personal/index.html
           grep -q "client-360-v22.js" www-personal/index.html
+          grep -q "day-editor-v24.js" www-personal/index.html
           grep -q "today-center-v15.css" www-personal/index.html
           grep -q "finance-v18.js" www-personal/index.html
           grep -q "finance-v18.css" www-personal/index.html
