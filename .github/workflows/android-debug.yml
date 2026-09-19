@@ -52,6 +52,7 @@ jobs:
           npm run release:check
           node scripts/test-finalization-v19.mjs
           node scripts/test-rest-extra-v21.mjs
+          node scripts/test-pre1-v23.mjs
       - name: Prepare native web bundle
         run: npm run native:prepare
       - name: Validate packaged experience
