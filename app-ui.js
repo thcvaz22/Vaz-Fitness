@@ -77,6 +77,7 @@ function startItem(id){
   const pending=state.pendingExtraWorkout,extra=!!(pending&&String(pending.planId)===String(id)&&Date.now()-Number(pending.selectedAt||0)<30*60*1000);
   if(item.type==='run'){ startRun(item); return; }
   state.current={planId:id,name:item.name,startedAt:Date.now(),exercises:item.exercises.map(e=>({...e,completedSets:[],effort:null})),currentIndex:0,extraWorkout:extra,executedOnRestDay:extra&&!!pending.executedOnRestDay,anticipatedWorkout:extra&&pending?.mode==='anticipate',anticipatedFromDate:extra?pending?.anticipatedFromDate||null:null,generatedExtra:extra&&pending?.mode==='generated',originalPlanDay:item.day,originalPlanId:item.id};
+  if(extra&&pending?.mode==='anticipate'&&pending?.anticipatedFromDate)window.VazCycleCalendar?.markAnticipated?.(pending.anticipatedFromDate,item);
   if(extra)state.pendingExtraWorkout=null;
   currentExerciseIndex=0; seconds=0; save(); activeView='workout'; startTimer(); render();
 }
