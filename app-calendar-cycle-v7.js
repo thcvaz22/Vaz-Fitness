@@ -26,6 +26,15 @@
   function completed(date,planId){return [...(state.sessions||[]),...(state.runSessions||[])].some(s=>!s.extraWorkout&&sessionDate(s)===date&&(String(s.planId||'')===String(planId)||String(s.basePlanId||'')===String(planId)))}
   function skipped(date,planId){return (state.skipped||[]).some(s=>skipDate(s)===date&&String(skipPlanId(s))===String(planId))}
   function overrides(){return state.weekOverrides&&typeof state.weekOverrides==='object'?state.weekOverrides:{}}
+  function anticipatedList(){return Array.isArray(state.anticipatedOccurrences)?state.anticipatedOccurrences:[]}
+  function isAnticipated(date,planId){return anticipatedList().some(x=>x&&x.originalDate===date&&String(x.planId)===String(planId))}
+  function markAnticipated(date,plan){
+    if(!date||!plan)return false;
+    const planId=plan.basePlanId||plan.id;
+    state.anticipatedOccurrences=anticipatedList().filter(x=>!(x.originalDate===date&&String(x.planId)===String(planId)));
+    state.anticipatedOccurrences.push({id:`anticip-${Date.now()}`,originalDate:date,planId,name:plan.name||'Treino',createdAt:new Date().toISOString()});
+    state.anticipatedOccurrences=state.anticipatedOccurrences.slice(-80);save();return true;
+  }
   function baseWeekEntries(wk){
     const start=fromKey(wk),out=[];if(!start)return out;
     for(let i=0;i<7;i++){
@@ -40,7 +49,7 @@
     if(o&&Array.isArray(o.entries))return o.entries.map(e=>({...clone(e),plan:{...clone(e.plan),status:'pending',basePlanId:e.plan?.basePlanId||e.plan?.id,_occurrenceDate:e.date}}));
     return baseWeekEntries(wk);
   }
-  function entriesForDate(date){return weekEntries(weekKey(date)).filter(e=>e.date===date)}
+  function entriesForDate(date){return weekEntries(weekKey(date)).filter(e=>e.date===date&&!isAnticipated(e.date,e.plan?.basePlanId||e.plan?.id))}
   function occurrenceStatus(entry){
     const p=entry.plan||{},id=p.basePlanId||p.id,dk=entry.date;
     if(completed(dk,id))return 'done';
@@ -133,9 +142,18 @@
     }catch{toast('Falta registrada. O remanejamento será sincronizado quando houver conexão.')}
   }
 
+  function upcomingOccurrences(limit=12){
+    const today=key(new Date()),c=cycle(),out=[];
+    for(let d=addDays(fromKey(today),1);d&&key(d)<=key(c.end)&&out.length<limit;d=addDays(d,1)){
+      const dk=key(d);
+      entriesForDate(dk).filter(e=>occurrenceStatus(e)==='pending').forEach(e=>out.push({...clone(e.plan),_occurrenceDate:e.date,_entryMode:e.mode,basePlanId:e.plan.basePlanId||e.plan.id}));
+    }
+    return out;
+  }
   const priorToday=todaysItem;
   window.VazTodayOccurrence=todayOccurrence;
   window.VazNextOccurrence=futureOccurrence;
+  window.VazCycleCalendar={...(window.VazCycleCalendar||{}),upcomingOccurrences,markAnticipated:(date,plan)=>markAnticipated(date,plan),isAnticipated};
   todaysItem=function(){return todayOccurrence()};
 
   const priorSkip=skipItem;
@@ -161,7 +179,7 @@
     const y=cursor.getFullYear(),m=cursor.getMonth(),prefix=`${y}-${pad(m+1)}-`,out=[];
     const c=cycle();for(let d=new Date(c.start);key(d)<=key(c.end);d=addDays(d,1)){const dk=key(d);if(!dk.startsWith(prefix))continue;entriesForDate(dk).forEach(e=>out.push(eventForEntry(e)))}
     (state.skipped||[]).forEach(s=>{const dk=skipDate(s);if(!dk?.startsWith(prefix))return;const pid=skipPlanId(s);if(out.some(e=>e.date===dk&&String(e.planId)===String(pid)))return;const p=(state.plan||[]).find(x=>String(x.id)===String(pid));if(p)out.push({date:dk,plan:p,planId:pid,name:p.name,type:p.type,status:'skipped',kind:'planned',mode:'skipped'})});
-    [...(state.sessions||[]),...(state.runSessions||[])].forEach(s=>{const dk=sessionDate(s);if(!dk.startsWith(prefix)||(s.planId&&!s.extraWorkout))return;out.push({date:dk,plan:s,planId:null,name:s.name||'Atividade adicional',type:s.distance!=null?'run':'strength',status:'additional',kind:'additional'})});
+    [...(state.sessions||[]),...(state.runSessions||[])].forEach(s=>{const dk=sessionDate(s);if(!dk.startsWith(prefix)||(s.planId&&!s.extraWorkout))return;out.push({date:dk,plan:s,planId:null,name:s.anticipatedWorkout?`Antecipado • ${s.name||'Treino'}`:s.name||'Atividade adicional',type:s.distance!=null?'run':'strength',status:'additional',kind:'additional'})});
     return out;
   }
   function dayTone(events){if(events.some(e=>['missed','skipped'].includes(e.status)))return 'missed';const planned=events.filter(e=>e.kind==='planned');if(planned.length&&planned.every(e=>e.status==='done'))return 'done';if(planned.some(e=>e.status==='pending'))return 'planned';if(events.some(e=>e.status==='additional'))return 'additional';return ''}
@@ -193,5 +211,5 @@
     .cycle-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:16px 0}.cycle-summary span{background:#fafafa;border:1px solid var(--line);border-radius:14px;padding:10px;font-size:9px;color:var(--muted)}.cycle-summary b{display:block;color:#222;font-size:12px;margin-bottom:2px}.cycle-day{min-height:92px;border:1px solid var(--line);border-radius:16px;padding:8px;background:#fff;text-align:left;font:inherit;position:relative;overflow:hidden;transition:.18s;cursor:pointer}.cycle-day.empty{visibility:hidden}.cycle-day.out-cycle{opacity:.32}.cycle-day.today{box-shadow:inset 0 0 0 3px #111}.cycle-day.tone-planned{background:#fff3a8;border-color:#dfbd1c}.cycle-day.tone-done{background:#dff5e6;border-color:#68ba80}.cycle-day.tone-missed{background:#ffe0dd;border-color:#df736a}.cycle-day.tone-additional{background:#dfe9ff;border-color:#7294dc}.cycle-number{font-size:13px;font-weight:950}.cycle-marks{display:flex;gap:4px;position:absolute;right:7px;top:7px}.cycle-marks span{width:19px;height:19px;border-radius:7px;background:rgba(255,255,255,.72);display:grid;place-items:center;font-size:9px;font-weight:950}.cycle-day>small{display:block;margin-top:28px;font-size:8px;font-weight:800;line-height:1.25;color:#302b17}.cycle-day .rest-label{color:var(--muted);font-weight:600}.cycle-day-dialog{width:min(680px,calc(100% - 18px));max-height:92dvh;padding:0}.cycle-day-sheet{padding:22px}.cycle-summary-card{border:1px solid var(--line);border-radius:18px;padding:15px;margin-top:10px;background:#fff}.cycle-summary-card.done{background:#f4fff7}.cycle-summary-card.skipped,.cycle-summary-card.missed{background:#fff7f6}.cycle-summary-head{display:flex;justify-content:space-between;gap:12px}.cycle-summary-head strong,.cycle-summary-head small{display:block}.cycle-summary-head small{font-size:10px;color:var(--muted);margin-top:3px}.cycle-summary-head>span{font-size:9px;font-weight:900;background:#191919;color:#fff;border-radius:999px;padding:6px 8px;height:max-content}.cycle-summary-card p{font-size:11px;color:var(--muted)}.cycle-ex-list{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0}.cycle-ex-list span{font-size:9px;background:#f4f4f4;border-radius:999px;padding:5px 8px}.cycle-note{display:block;color:#806a00;margin:8px 0}.cycle-summary-card .btn{margin-top:8px}@media(max-width:680px){.cycle-summary{grid-template-columns:1fr 1fr}.cycle-day{min-height:74px;padding:6px}.cycle-day>small{margin-top:22px;font-size:7px}.cycle-marks span{width:16px;height:16px}.cycle-grid{gap:4px}}
   `;document.head.appendChild(style);
 
-  state.remapPolicy=state.remapPolicy||'ask';state.weekOverrides=state.weekOverrides||{};state.remapRequests=state.remapRequests||[];state.trainingCycle=state.trainingCycle||{days:30};save();setTimeout(()=>syncConfig(true),700);
+  state.remapPolicy=state.remapPolicy||'ask';state.weekOverrides=state.weekOverrides||{};state.remapRequests=state.remapRequests||[];state.anticipatedOccurrences=Array.isArray(state.anticipatedOccurrences)?state.anticipatedOccurrences:[];state.trainingCycle=state.trainingCycle||{days:30};save();setTimeout(()=>syncConfig(true),700);
 })();
