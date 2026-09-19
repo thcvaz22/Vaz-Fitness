@@ -44,12 +44,16 @@ function showSummary(s){
 }
 
 function startRun(item){
-  const feedback = prompt(`Iniciar ${item.name}\nPace sugerido: ${item.pace}/km\nDuração: ${item.duration} min\n\nDigite o pace realizado (ex.: 5:15):`,item.pace);
-  if(feedback===null)return;
-  const effortRaw=prompt('Como foi o esforço? Digite: fácil, moderado ou difícil','moderado')||'moderado';
-  const norm=effortRaw.toLowerCase(); const effort=norm.includes('fác')||norm.includes('fac')?'easy':norm.includes('dif')?'hard':'moderate';
-  state.runSessions.push({id:Date.now(),date:new Date().toISOString(),name:item.name,duration:item.duration,plannedPace:item.pace,pace:feedback,effort});
-  item.status='done'; item.nextPace=suggestRunPace(item.intensity); state.score=Math.min(99,state.score+1);save();render();toast(`Corrida registrada. Próximo pace sugerido: ${item.nextPace}/km`);
+  const pending=state.pendingExtraWorkout,extra=!!(pending&&String(pending.planId)===String(item.id)&&Date.now()-Number(pending.selectedAt||0)<30*60*1000);
+  document.getElementById('legacyRunDialog')?.remove();
+  const d=document.createElement('dialog');d.id='legacyRunDialog';d.className='dialog';
+  d.innerHTML=`<form class="coach-dialog-sheet" data-legacy-run><span class="eyebrow">${extra?'CORRIDA EXTRA':'CORRIDA'}</span><h2>${item.name}</h2><p>Pace sugerido: <strong>${item.pace}/km</strong> • ${item.duration} min</p><label>Pace realizado<input name="pace" value="${item.pace||''}" placeholder="Ex.: 5:15" required></label><label>Esforço<select name="effort"><option value="easy">Fácil</option><option value="moderate" selected>Moderado</option><option value="hard">Difícil</option></select></label><div class="dialog-actions"><button type="button" class="btn ghost" data-close>Cancelar</button><button class="btn primary">Registrar corrida</button></div></form>`;
+  document.body.appendChild(d);d.showModal();d.querySelector('[data-close]').onclick=()=>{d.close();d.remove()};
+  d.querySelector('form').onsubmit=e=>{e.preventDefault();const f=new FormData(e.currentTarget),feedback=String(f.get('pace')||item.pace||''),effort=String(f.get('effort')||'moderate');
+    state.runSessions.push({id:Date.now(),date:new Date().toISOString(),name:item.name,duration:item.duration,plannedPace:item.pace,pace:feedback,effort,planId:item.id,extraWorkout:extra,executedOnRestDay:extra&&!!pending?.executedOnRestDay,originalPlanDay:item.day,originalPlanId:item.id});
+    if(!extra){item.status='done';item.nextPace=suggestRunPace(item.intensity)}else state.pendingExtraWorkout=null;
+    state.score=Math.min(99,state.score+1);save();d.close();d.remove();render();toast(extra?'Corrida extra registrada.':`Corrida registrada. Próximo pace sugerido: ${item.nextPace}/km`);
+  };
 }
 
 function skipItem(id){
