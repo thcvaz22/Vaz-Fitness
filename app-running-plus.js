@@ -66,7 +66,7 @@
     const content=document.getElementById('summaryContent');if(!content)return;
     const actions=content.querySelector('.dialog-actions');
     const extras=document.createElement('div');extras.className='run-summary-plus';
-    extras.innerHTML=`${s.splits?.length?`<div class="card"><div class="card-head"><div><h3>Splits por quilômetro</h3><p>Ritmo de cada quilômetro completo</p></div></div><div class="summary-splits">${s.splits.map(x=>`<div><span>KM ${x.km}</span><strong>${x.pace}/km</strong><small>${formatRunTime(x.splitSec)}</small></div>`).join('')}</div></div>`:''}<div class="card"><div class="card-head"><div><h3>Trajeto da corrida</h3><p>Desenho do caminho gravado pelo GPS</p></div></div>${routeSvg(s.route)}</div>`;
+    extras.innerHTML=`${s.splits?.length?`<div class="card"><div class="card-head"><div><h3>Splits por quilômetro</h3><p>Ritmo de cada quilômetro completo</p></div></div><div class="summary-splits">${s.splits.map(x=>`<div><span>KM ${x.km}</span><strong>${x.pace}/km</strong><small>${formatRunTime(x.splitSec)}</small></div>`).join('')}</div></div>`:''}`;
     if(actions)actions.before(extras);else content.appendChild(extras);
   };
 
