@@ -19,6 +19,22 @@ function isoDate(v){const m=String(v||'').match(/^\d{4}-\d{2}-\d{2}$/);return m?
 function money(v){if(v===''||v==null)return null;const n=Number(v);return Number.isFinite(n)&&n>=0&&n<=99999999?n:null}
 function phone(v=''){const digits=String(v||'').replace(/\D/g,'').slice(0,15);return digits.length>=10?digits:null}
 function todayISO(){return new Date().toISOString().slice(0,10)}
+function paceToSec(value){
+  const m=String(value||'').trim().match(/^(\d{1,2}):(\d{2})/);
+  if(!m)return null;const sec=Number(m[1])*60+Number(m[2]);return sec>=120&&sec<=1800?sec:null;
+}
+function runPerformance(runs=[]){
+  const list=Array.isArray(runs)?runs:[],avg=list.map(r=>({pace:r?.pace,sec:paceToSec(r?.pace)})).filter(x=>x.sec),splits=list.flatMap(r=>Array.isArray(r?.splits)?r.splits:[]).map(x=>({pace:x?.pace,sec:paceToSec(x?.pace)})).filter(x=>x.sec);
+  const bestAvg=avg.sort((a,b)=>a.sec-b.sec)[0]||null,bestSplit=splits.sort((a,b)=>a.sec-b.sec)[0]||null;
+  return {
+    bestAveragePace:bestAvg?.pace||null,bestAveragePaceSec:bestAvg?.sec||null,
+    bestKmSplitPace:bestSplit?.pace||null,bestKmSplitPaceSec:bestSplit?.sec||null,
+    longestDistanceKm:Math.max(0,...list.map(r=>Number(r?.distance)||0)),
+    longestDurationMin:Math.max(0,...list.map(r=>Number(r?.duration)||0)),
+    recentHardRuns:list.filter(r=>String(r?.effort)==='hard').length,
+    samples:list.length,splitSamples:splits.length
+  };
+}
 function envInt(name,fallback,min,max){const n=Number(process.env[name]);return Number.isFinite(n)?Math.max(min,Math.min(max,Math.floor(n))):fallback}
 function addMonths(dateStr,months=1,preferredDay=null){
   const [y,m,d]=String(dateStr).split('-').map(Number);const day=preferredDay||d;
@@ -302,7 +318,7 @@ export default async function handler(req,res){
       const schedule=isObject(rawPlanning.schedule)?Object.fromEntries(Object.entries(rawPlanning.schedule).filter(([k,v])=>/^[0-6]$/.test(String(k))&&['REST','A','B','C','D','E'].includes(String(v)))):{};
       const letters=isObject(rawPlanning.letters)?Object.fromEntries(Object.entries(rawPlanning.letters).slice(0,5).map(([k,v])=>[clean(k,2),{name:clean(v?.name,80),focus:Array.isArray(v?.focus)?v.focus.map(x=>clean(x,30)).filter(Boolean).slice(0,10):[]}])):{};
       const planning={cycleDays,split,exerciseCount,schedule,letters};
-      const context={profile:state.profile||{},goals:state.goals||{},healthContext:state.profile?.healthContext||{},healthRecords:(state.healthRecords||[]).slice(-20),recentWorkoutFeedback,bodyMeasurements:(state.bodyMeasurements||[]).slice(-12),readiness:(state.readinessCheckins||[]).slice(-10),recentStrength,recentRuns,calendar:(state.calendarEvents||[]).slice(-60),currentPlan,cycleDays,planChangeRequest:activeRequest,planning};
+      const context={profile:state.profile||{},goals:state.goals||{},healthContext:state.profile?.healthContext||{},healthRecords:(state.healthRecords||[]).slice(-20),recentWorkoutFeedback,bodyMeasurements:(state.bodyMeasurements||[]).slice(-12),readiness:(state.readinessCheckins||[]).slice(-10),recentStrength,recentRuns,runPerformance:runPerformance(recentRuns),calendar:(state.calendarEvents||[]).slice(-60),currentPlan,cycleDays,planChangeRequest:activeRequest,planning};
       const ai=new GoogleGenAI({apiKey:process.env.GEMINI_API_KEY});const response=await ai.models.generateContent({model:MODEL,contents:`DADOS DO ALUNO, HISTÓRICO E PLANEJAMENTO DEFINIDO PELO PERSONAL:\
 ${JSON.stringify(context,null,2)}\
 \
