@@ -97,17 +97,31 @@ function planRestDays(plan=[]){
   const training=new Set((Array.isArray(plan)?plan:[]).map(day=>Number(day?.day)).filter(day=>Number.isInteger(day)&&day>=0&&day<=6));
   return [0,1,2,3,4,5,6].filter(day=>!training.has(day));
 }
+const runPhaseSchema={type:'object',properties:{durationMin:{type:'integer'},distanceKm:{type:'number'},pace:{type:'string'},instructions:{type:'string'}}};
+const runBlockSchema={type:'object',properties:{
+  order:{type:'integer'},label:{type:'string'},repeat:{type:'integer'},
+  workDistanceM:{type:'integer'},workDurationSec:{type:'integer'},workPace:{type:'string'},
+  recoveryDistanceM:{type:'integer'},recoveryDurationSec:{type:'integer'},recoveryPace:{type:'string'},
+  instructions:{type:'string'}
+},required:['order','label','repeat','instructions']};
 const planSchema={
   type:'object',properties:{
     summary:{type:'string'},reasons:{type:'array',items:{type:'string'}},
     plan:{type:'array',items:{type:'object',properties:{
       id:{type:'string'},type:{type:'string',enum:['strength','run']},name:{type:'string'},day:{type:'integer'},duration:{type:'integer'},status:{type:'string'},pace:{type:'string'},intensity:{type:'string'},
+      runStructure:{type:'object',properties:{
+        workoutType:{type:'string',enum:['easy','recovery','long','tempo','progressive','intervals','sprints','fartlek']},
+        targetRpe:{type:'integer'},estimatedTotalKm:{type:'number'},notes:{type:'string'},
+        warmup:runPhaseSchema,blocks:{type:'array',items:runBlockSchema},cooldown:runPhaseSchema
+      }},
       exercises:{type:'array',items:{type:'object',properties:{id:{type:'string'},name:{type:'string'},muscle:{type:'string'},secondary:{type:'array',items:{type:'string'}},sets:{type:'integer'},reps:{type:'string'},load:{type:'number'},rest:{type:'integer'},icon:{type:'string'},priority:{type:'boolean'}},required:['id','name','muscle','sets','reps','rest']}}
     },required:['id','type','name','day','duration']}}
   },required:['summary','reasons','plan']
 };
 function planInstruction(){return `Você é AION IA apoiando um profissional de Educação Física na revisão de um plano de treino. Gere somente um RASCUNHO estruturado para revisão humana. Use exclusivamente os dados recebidos. Responda em português do Brasil.
 Regras gerais: respeite modalidade, objetivo, níveis separados, disponibilidade semanal e tempo por sessão; considere histórico recente, progressão de cargas, esforço, consistência, prontidão, peso/medidas, corrida e feedback pós-treino; evite aumentos bruscos de volume/intensidade; para corrida não aumente simultaneamente distância, pace e intensidade de forma agressiva; para emagrecimento preserve musculação e progressão sustentável; para hipertrofia use volume recuperável e progressão; mantenha exercícios adequados e comuns; se faltarem dados, seja conservador.
+Corrida estruturada: todo dia do tipo "run" deve conter runStructure. Especifique aquecimento, um ou mais blocos principais em ordem e volta à calma. Em intervalados/tiros informe explicitamente quantas repetições, distância ou tempo de cada esforço, pace-alvo, recuperação entre repetições (distância ou tempo) e pace/intensidade da recuperação. Em progressivos/tempo/fartlek descreva cada mudança de ritmo separadamente. O campo pace do dia é apenas um resumo; os ritmos executáveis ficam em runStructure.
+Capacidade para tiros: use recentRuns, splits quando existirem, melhores esforços recentes, distância, duração, pace médio, percepção de esforço, prontidão e feedback. Não invente um "máximo" exato se os dados não sustentarem isso. Defina um alvo forte porém controlado e seguro, deixando em reasons quando a estimativa for conservadora por falta de histórico. Nunca prescreva sprint máximo all-out com base apenas em pace médio.
 Lesões e limitações: leia healthContext e healthRecords antes de escolher exercícios. Restrições ativas, movimentos marcados como evitar/limitar e orientações profissionais registradas devem ser respeitados no rascunho. Ajuste seleção de exercícios, impacto, amplitude, volume, carga e progressão de forma conservadora. Não faça diagnóstico, não prescreva tratamento ou reabilitação e não estime prazo de cura. Se a restrição for relevante, ambígua ou incompatível com o objetivo, sinalize isso em reasons para o personal revisar antes de liberar.
 Feedback: considere intensidade percebida, fadiga/cansaço, esforço geral e observações dos treinos recentes. Fadiga alta repetida, esforço muito alto ou desconforto relatado deve reduzir a agressividade da progressão.
 O personal fará a decisão final e poderá alterar cada exercício antes de liberar.`}
@@ -292,7 +306,7 @@ export default async function handler(req,res){
       const ai=new GoogleGenAI({apiKey:process.env.GEMINI_API_KEY});const response=await ai.models.generateContent({model:MODEL,contents:`DADOS DO ALUNO, HISTÓRICO E PLANEJAMENTO DEFINIDO PELO PERSONAL:\
 ${JSON.stringify(context,null,2)}\
 \
-Estruture o próximo ciclo respeitando primeiro o planejamento informado pelo personal em planning. Considere obrigatoriamente os dados do aluno, objetivo, disponibilidade, lesões e limitações, movimentos a evitar, prontidão, feedbacks registrados após os treinos e o histórico recente de musculação/corrida. Se houver split, nomes/focos das letras, quantidade de exercícios e schedule, use essas escolhas como estrutura principal. Nunca agende treino nos dias marcados como REST, em profile.restDays ou em planChangeRequest.rest_days. Ajuste seleção de exercícios, volume, séries, repetições e descanso ao contexto real do aluno e aos sinais de fadiga/dor. Para corrida, inclua duração, pace/intensidade apenas quando houver base suficiente. O resultado é um rascunho para revisão do personal e não deve ser tratado como já liberado ao aluno.`,config:{systemInstruction:planInstruction(),responseMimeType:'application/json',responseSchema:planSchema,maxOutputTokens:2600,temperature:0.3}});
+Estruture o próximo ciclo respeitando primeiro o planejamento informado pelo personal em planning. Considere obrigatoriamente os dados do aluno, objetivo, disponibilidade, lesões e limitações, movimentos a evitar, prontidão, feedbacks registrados após os treinos e o histórico recente de musculação/corrida. Se houver split, nomes/focos das letras, quantidade de exercícios e schedule, use essas escolhas como estrutura principal. Nunca agende treino nos dias marcados como REST, em profile.restDays ou em planChangeRequest.rest_days. Ajuste seleção de exercícios, volume, séries, repetições e descanso ao contexto real do aluno e aos sinais de fadiga/dor. Para cada corrida, gere runStructure completo e executável: aquecimento, blocos principais ordenados, recuperações claramente especificadas e volta à calma. Em intervalados e tiros, indique repetições, metros/km ou tempo do esforço, pace-alvo, intervalo entre tiros e pace/intensidade da recuperação. Use o histórico recente para estimar ritmos fortes; quando os dados forem insuficientes, seja conservador e explique em reasons. O resultado é um rascunho para revisão do personal e não deve ser tratado como já liberado ao aluno.`,config:{systemInstruction:planInstruction(),responseMimeType:'application/json',responseSchema:planSchema,maxOutputTokens:5200,temperature:0.3}});
       let data;try{data=JSON.parse(response.text)}catch{return sendError(res,502,'AION retornou uma sugestão inválida. Tente novamente.','invalid_ai_output')}
       if(!Array.isArray(data.plan)||!data.plan.length)return sendError(res,502,'AION não conseguiu montar o plano agora.','empty_ai_plan');
       const requestedRest=activeRequest?.rest_days||state.profile?.restDays||[];data.plan=applyRestDays(data.plan,requestedRest);
