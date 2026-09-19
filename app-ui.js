@@ -15,7 +15,8 @@ function render(){
 
 function renderHome(){
   const today=todaysItem();
-  const todayRest=Array.isArray(state.profile?.restDays)&&state.profile.restDays.map(Number).includes(new Date().getDay());
+  const configuredRest=Array.isArray(state.profile?.restDays)&&state.profile.restDays.map(Number).includes(new Date().getDay());
+  const todayRest=!today&&configuredRest;
   const strengthDone=state.sessions.length;
   const runDone=state.runSessions.length;
   const mins=state.sessions.reduce((a,s)=>a+(s.duration||0),0)+state.runSessions.reduce((a,s)=>a+(s.duration||0),0);
@@ -25,9 +26,9 @@ function renderHome(){
       <div class="hero-card">
         <span class="eyebrow">PLANO ADAPTATIVO</span>
         <h1>${greeting()}, ${state.profile.name}.<br>Vamos evoluir hoje?</h1>
-        <p>${todayRest?'Hoje é seu dia de descanso planejado. O repouso é importante para a recuperação muscular e para você chegar melhor ao próximo treino. Se achar necessário, pode fazer um treino leve hoje.':today?`${today.type==='run'?'Corrida':'Musculação'} programada: <strong>${today.name}</strong>. O plano se ajusta conforme sua carga, esforço e disponibilidade.`:'Sua semana está concluída. Ótimo trabalho.'}</p>
+        <p>${todayRest?'Hoje é seu dia de descanso planejado. O repouso ajuda na recuperação muscular, na reposição de energia e na qualidade do próximo treino. Se estiver se sentindo bem, você pode optar apenas por uma atividade leve.':today?`${today.type==='run'?'Corrida':'Musculação'} programada: <strong>${today.name}</strong>. As orientações abaixo seguem exatamente este treino e qualquer remanejamento já aplicado.`:'Hoje não há treino programado no seu ciclo. Aproveite para recuperar o corpo e se preparar para a próxima sessão.'}</p>
         <div class="hero-actions">
-          ${todayRest?`<button class="btn primary" data-extra-workout-open>＋ Selecionar treino extra</button>`:today?`<button class="btn primary" data-start="${today.id}">▶ Iniciar ${today.type==='run'?'corrida':'treino'}</button><button class="btn white" data-skip="${today.id}">Não vou treinar hoje</button>`:`<button class="btn primary" data-regenerate>Gerar próxima semana</button>`}
+          ${todayRest?`<button class="btn primary" data-extra-workout-open>＋ Selecionar treino extra</button>`:today?`<button class="btn primary" data-start="${today.id}">▶ Iniciar ${today.type==='run'?'corrida':'treino'}</button><button class="btn white" data-skip="${today.id}">Não vou treinar hoje</button>`:`<button class="btn primary" data-extra-workout-open>＋ Selecionar treino extra</button>`}
         </div>
       </div>
       <div class="score-card">
