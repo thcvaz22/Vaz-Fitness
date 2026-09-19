@@ -150,7 +150,6 @@
   function startChosenExtra(item,{mode='extra',anticipatedFromDate=null}={}){
     if(!item)return;
     state.pendingExtraWorkout={planId:item.id,selectedAt:Date.now(),executedOnRestDay:isRestDayToday(),day:new Date().getDay(),mode,anticipatedFromDate};
-    if(mode==='anticipate'&&anticipatedFromDate)window.VazCycleCalendar?.markAnticipated?.(anticipatedFromDate,item);
     save();startItem(item.id);
   }
   function generatedExtraPlan(){
