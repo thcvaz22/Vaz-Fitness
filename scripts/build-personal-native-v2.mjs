@@ -35,7 +35,7 @@ const copies=[
   ['personal/aion-action-plan-v20.js',`${out}/aion-action-plan-v20.js`],
   ['personal/client-360-v22.js',`${out}/client-360-v22.js`],
   ['personal/finance-v18.js',`${out}/finance-v18.js`],
-  ['personal/day-editor-v24.js',`${out}/day-editor-v24.js`],
+  ['personal/student-planning-v25.js',`${out}/student-planning-v25.js`],
   ['personal/sw.js',`${out}/sw.js`],
   ['personal/manifest.webmanifest',`${out}/manifest.webmanifest`],
   ['personal/icon.svg',`${out}/icon.svg`]
