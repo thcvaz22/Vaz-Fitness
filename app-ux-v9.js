@@ -151,14 +151,26 @@
     return {objective:'Desenvolver base aeróbica, recuperação e eficiência mantendo esforço confortável.',steps:['Corra em ritmo em que ainda consiga controlar a respiração.','Priorize fluidez e técnica, não velocidade.','Se o corpo estiver pesado, reduza o ritmo sem culpa.','Finalize sentindo que ainda teria pequena margem.']};
   }
   function strengthFocus(t){
-    const counts={};(t?.exercises||[]).forEach(e=>{if(e.muscle)counts[e.muscle]=(counts[e.muscle]||0)+Number(e.sets||1)});
-    const top=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([m])=>muscleNames[m]||m);
-    const focus=top.length?top.join(', '):'força e execução';
-    return `O foco de hoje é ${focus}. Priorize amplitude confortável, técnica consistente e séries com boa qualidade antes de pensar em aumentar carga.`;
+    const exercises=Array.isArray(t?.exercises)?t.exercises:[];
+    const counts={};exercises.forEach(e=>{if(e.muscle)counts[e.muscle]=(counts[e.muscle]||0)+Number(e.sets||1)});
+    const ranked=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    const top=ranked.map(([m])=>muscleNames[m]||m),keys=ranked.map(([m])=>m),focus=top.length?top.join(', '):'força e execução';
+    const names=exercises.map(e=>String(e.name||'').toLowerCase());
+    const tips=[];
+    if(keys.some(m=>['chest','shoulders','triceps'].includes(m))||names.some(n=>/supino|desenvolvimento|eleva[cç][aã]o|tr[ií]ceps/.test(n)))tips.push('mantenha as escápulas e os ombros estáveis, controle a descida e evite perder o alinhamento de cotovelos e punhos');
+    if(keys.some(m=>['back','biceps'].includes(m))||names.some(n=>/remada|puxada|barra|rosca/.test(n)))tips.push('inicie as puxadas com controle das escápulas, evite embalo do tronco e não transforme a repetição em impulso');
+    if(keys.some(m=>['quads','hamstrings','glutes','calves'].includes(m))||names.some(n=>/agach|leg press|terra|stiff|afundo|passada|panturr/.test(n)))tips.push('mantenha os pés firmes, joelhos acompanhando a linha dos pés e o tronco estável durante toda a amplitude');
+    if(keys.includes('core')||names.some(n=>/prancha|abdom|core/.test(n)))tips.push('mantenha o abdômen ativo e evite compensar com a lombar');
+    const care=tips.slice(0,2).join('. ');
+    return `Hoje o treino é <strong>${safe(t?.name||'Treino')}</strong>, com ênfase em <strong>${safe(focus)}</strong>. ${care?care.charAt(0).toUpperCase()+care.slice(1)+'. ':' '}Priorize amplitude confortável, execução controlada e qualidade das repetições antes de aumentar a carga.`;
   }
   function focusText(t){
-    if(!t)return 'Hoje o foco é recuperação: sono, hidratação, alimentação e mobilidade leve ajudam a chegar melhor ao próximo treino.';
-    if(t.type==='run'){const g=runGuidance(t);return `${g.objective} Meta de ${Number(t.duration)||0} min${t.pace?` com referência de ${safe(t.pace)}/km`:''}.`}
+    if(!t)return 'Aproveite o dia para recuperar o corpo. Priorize sono de qualidade, hidratação, alimentação adequada e, se estiver se sentindo bem, mobilidade ou caminhada leve. A recuperação de hoje influencia diretamente a qualidade do próximo treino.';
+    if(t.type==='run'){
+      const g=runGuidance(t),rs=t.runStructure,blocks=Array.isArray(rs?.blocks)?rs.blocks:[];
+      const structure=blocks.length?` O treino está dividido em ${blocks.length} bloco(s); respeite os paces e as recuperações programadas, sem acelerar além do previsto.`:'';
+      return `Hoje o treino é <strong>${safe(t.name||'Corrida')}</strong>. ${g.objective} Meta de ${Number(t.duration)||0} min${t.pace?` com referência de ${safe(t.pace)}/km`:''}.${structure} Mantenha postura estável, passada natural e controle o esforço para executar bem até o final.`;
+    }
     return strengthFocus(t);
   }
   function metricReminderDue(){
@@ -174,7 +186,7 @@
     const card=root.querySelector('.coach-today-card');
     if(card){
       const reminder=metricReminderDue()?`<div class="v9-cycle-metric-reminder"><strong>📏 Ciclo finalizado: hora de atualizar suas métricas.</strong><span>AION recomenda registrar peso e medidas para comparar este ciclo com o próximo.</span><button class="btn ghost compact" data-v9-nav="metrics">Registrar métricas</button></div>`:'';
-      card.innerHTML=`<div class="card-head"><div><span class="eyebrow">FOCO DE HOJE</span><h2>${t?safe(t.name):'Recuperação também faz parte'}</h2></div><span class="coach-readiness ${check?'done':''}">${check?`${check.score}% prontidão`:'Ainda não registrado'}</span></div><div class="v9-focus-copy"><p>${focusText(t)}</p><strong>${motivation()}</strong></div>${reminder}<div class="v9-feeling"><span>Como você está se sentindo hoje?</span><button class="btn primary" data-readiness-open>Como estou</button></div>`;
+      card.innerHTML=`<div class="card-head"><div><span class="eyebrow">FOCO DE HOJE</span><h2>${t?safe(t.name):'Recuperação do dia'}</h2></div><span class="coach-readiness ${check?'done':''}">${check?`${check.score}% prontidão`:'Ainda não registrado'}</span></div><div class="v9-focus-copy"><p>${focusText(t)}</p><strong>${t?motivation():'Descansar também faz parte do progresso.'}</strong></div>${reminder}<div class="v9-feeling"><span>Como você está se sentindo hoje?</span><button class="btn primary" data-readiness-open>Como estou</button></div>`;
     }
     root.querySelectorAll('[data-nav="aion"]').forEach(b=>b.remove());
     root.querySelectorAll('[data-nav="progress"]').forEach(b=>{b.removeAttribute('data-nav');b.dataset.v9Nav='metrics';b.textContent='Ver métricas';});
