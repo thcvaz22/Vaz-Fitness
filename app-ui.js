@@ -48,12 +48,16 @@ function renderHome(){
     </section>`;
 }
 function greeting(){const h=new Date().getHours();return h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'}
-function renderPlanItem(p){return `<div class="plan-item ${p.day===new Date().getDay()?'today':''} ${p.status==='done'?'done':''} ${p.status==='skipped'?'skipped':''}"><div class="day-dot">${weekdayNames[p.day]}</div><div class="plan-copy"><strong>${p.name}</strong><small>${p.type==='run'?`${p.duration} min • ${p.pace}/km`:`${p.exercises.length} exercícios • ~${p.duration} min`}</small></div><div class="plan-tag">${p.status==='done'?'CONCLUÍDO':p.status==='skipped'?'REAJUSTADO':p.type==='run'?'CORRIDA':'FORÇA'}</div></div>`}
+function renderPlanItem(p){
+  const runMeta=p.type==='run'&&p.runStructure?` • ${({intervals:'intervalado',sprints:'tiros',progressive:'progressivo',tempo:'tempo',long:'longão',recovery:'recuperação',easy:'leve',fartlek:'fartlek'})[p.runStructure.workoutType]||'estruturado'}`:'';
+  return `<div class="plan-item ${p.day===new Date().getDay()?'today':''} ${p.status==='done'?'done':''} ${p.status==='skipped'?'skipped':''}"><div class="day-dot">${weekdayNames[p.day]}</div><div class="plan-copy"><strong>${p.name}</strong><small>${p.type==='run'?`${p.duration} min • ${p.pace}/km${runMeta}`:`${p.exercises.length} exercícios • ~${p.duration} min`}</small></div><div class="plan-tag">${p.status==='done'?'CONCLUÍDO':p.status==='skipped'?'REAJUSTADO':p.type==='run'?'CORRIDA':'FORÇA'}</div></div>`
+}
 
 function renderWorkout(){
   const today=todaysItem();
   const strength=state.plan.filter(x=>x.type==='strength');
   return `<section class="workout-hero"><div><span class="eyebrow">TREINO</span><h1>${today?today.name:'Plano concluído'}</h1><p>${today?today.type==='run'?`Pace sugerido ${today.pace}/km • intensidade ${today.intensity}`:`Ênfase do ciclo: ${muscleNames[state.profile.priorityMuscle]}. ${today.exercises.length} exercícios em até ${today.duration} min.`:'Gere uma nova semana para continuar.'}</p></div>${today?`<button class="btn dark" data-start="${today.id}">▶ Iniciar agora</button>`:`<button class="btn primary" data-regenerate>Gerar semana</button>`}</section>
+  ${today?.type==='run'&&today.runStructure&&typeof window.renderStructuredRunPlan==='function'?window.renderStructuredRunPlan(today.runStructure,{compact:true}):''}
   <div class="grid two"><div class="card"><div class="card-head"><div><h2>Planejamento</h2><p>Musculação e corrida integradas</p></div></div><div class="plan-list">${state.plan.map(renderPlanItem).join('')}</div></div>
   <div class="card"><div class="card-head"><div><h2>Próximo treino de força</h2><p>Progressão orientada por esforço</p></div></div><div class="workout-list">${(strength.find(x=>x.status==='pending')?.exercises||[]).map(e=>`<div class="exercise-row"><div class="exercise-icon">${e.icon}</div><div><strong>${e.name}</strong><small>${muscleNames[e.muscle]}${e.priority?' • prioridade do ciclo':''}</small></div><div class="exercise-meta"><strong>${e.sets}× ${e.reps}</strong><small>${e.load?`Sug. ${e.load} kg`:'Corporal'}</small></div></div>`).join('')||'<p style="color:#777">Nenhum treino pendente.</p>'}</div></div></div>`
 }
