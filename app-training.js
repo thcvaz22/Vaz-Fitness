@@ -31,7 +31,7 @@ function finishWorkout(){
   const volume=exercises.reduce((a,e)=>a+e.completedSets.reduce((x,s)=>x+(s.load*s.reps),0),0);
   const muscleScore={};
   exercises.forEach(e=>{muscleScore[e.muscle]=(muscleScore[e.muscle]||0)+e.sets*3;e.secondary.forEach(m=>muscleScore[m]=(muscleScore[m]||0)+e.sets)});
-  const session={id:Date.now(),date:new Date().toISOString(),name:item?.name||'Treino',duration,volume:Math.round(volume),exercises,muscleScore,planId:c.planId,extraWorkout:!!c.extraWorkout,executedOnRestDay:!!c.executedOnRestDay,originalPlanDay:c.originalPlanDay??item?.day,originalPlanId:c.originalPlanId||item?.id};
+  const session={id:Date.now(),date:new Date().toISOString(),name:c.name||item?.name||'Treino',duration,volume:Math.round(volume),exercises,muscleScore,planId:c.planId,extraWorkout:!!c.extraWorkout,executedOnRestDay:!!c.executedOnRestDay,anticipatedWorkout:!!c.anticipatedWorkout,anticipatedFromDate:c.anticipatedFromDate||null,generatedExtra:!!c.generatedExtra,originalPlanDay:c.originalPlanDay??item?.day,originalPlanId:c.originalPlanId||item?.id};
   state.sessions.push(session); if(item&&!c.extraWorkout)item.status='done'; state.current=null; state.score=Math.min(99,state.score+1); save();
   showSummary(session); activeView='home'; render();
 }
