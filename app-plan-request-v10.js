@@ -167,7 +167,7 @@
     const item=generatedExtraPlan();
     if(item.type==='run'){
       state.pendingExtraWorkout={planId:item.id,selectedAt:Date.now(),executedOnRestDay:isRestDayToday(),day:new Date().getDay(),mode:'generated'};
-      state.plan.push(item);save();startRun(item);return;
+      save();startRun(item);return;
     }
     state.current={planId:null,name:item.name,startedAt:Date.now(),exercises:(item.exercises||[]).map(e=>({...e,completedSets:[],effort:null})),currentIndex:0,extraWorkout:true,generatedExtra:true,executedOnRestDay:isRestDayToday(),anticipatedWorkout:false,anticipatedFromDate:null,originalPlanDay:new Date().getDay(),originalPlanId:null};
     currentExerciseIndex=0;seconds=0;save();activeView='workout';startTimer();render();
