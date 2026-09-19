@@ -112,7 +112,8 @@
       dayDraft.intensity=val('intensity')||'Leve';
     }else{
       const prior=Array.isArray(dayDraft.exercises)?dayDraft.exercises:[];
-      dayDraft.exercises=[...root.querySelectorAll('[data-day-edit-ex]')].map((row,ei)=>{
+      const rows=[...root.querySelectorAll('[data-day-edit-ex]')];
+      if(rows.length||!prior.length)dayDraft.exercises=rows.map((row,ei)=>{
         const old=prior[ei]||{};
         const get=n=>row.querySelector('[data-exdraft="'+n+'"]')?.value;
         return {...old,
@@ -152,7 +153,7 @@
       plan[editorIndex]=clone(dayDraft);
       selected.plan={...(selected.plan||{}),plan};
       editorModal?.remove();editorModal=null;
-      try{await savePlan();toast('Treino do dia salvo e atualizado no card.')}catch(err){toast(err.message)}
+      await savePlan();
       dayDraft=null;editorIndex=-1;
     });
   }
