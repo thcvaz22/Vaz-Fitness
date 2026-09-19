@@ -42,6 +42,7 @@ jobs:
           node --check app-plan-request-v10.js
           node --check app-plan-sync-v11.js
           node --check app-custom-exercise-media.js
+          node --check app-running-structured-v33.js
           node --check api/vf.js
           node --check lib/self-coached-access.js
           node scripts/test-auth-entry.mjs
@@ -62,11 +63,13 @@ jobs:
           test -f www/app-plan-request-v10.js
           test -f www/app-plan-sync-v11.js
           test -f www/app-custom-exercise-media.js
+          test -f www/app-running-structured-v33.js
           node --check www/app-auth-entry-v8.js
           node --check www/app-ux-v9.js
           node --check www/app-plan-request-v10.js
           node --check www/app-plan-sync-v11.js
           node --check www/app-custom-exercise-media.js
+          node --check www/app-running-structured-v33.js
           grep -q "app-auth-entry-v8.js" www/app-polish-v2.js
           grep -q "app-ux-v9.js" www/app-polish-v2.js
           grep -q "app-plan-request-v10.js" www/app-polish-v2.js
