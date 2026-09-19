@@ -45,6 +45,7 @@ jobs:
           npm run release:check
           node --check app-plan-request-v10.js
           node --check app-plan-sync-v11.js
+          node --check app-measurement-female-v34.js
           node --check app-running-structured-v33.js
           node --check personal/advanced-v8.js
           node --check personal/plan-request-workflow-v12.js
