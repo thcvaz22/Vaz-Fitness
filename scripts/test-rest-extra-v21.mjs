@@ -38,7 +38,8 @@ assert.match(running,/if\(item&&!r\.extraWorkout\)/,'Corrida extra não pode con
 assert.match(calendar,/session\.planId&&!session\.extraWorkout/,'Calendário não pode converter extra em planejado concluído');
 assert.match(cycle,/!s\.extraWorkout&&sessionDate/,'Ciclo deve ignorar extra ao checar conclusão');
 
-assert.match(ux,/body-measurement-guide-v4\.svg/,'Guia deve usar asset válido em retrato');
+assert.match(ux,/measurement-overview\.jpg/,'Guia masculino deve usar asset real em retrato');
+assert.match(ux,/VAZ_FEMALE_MEASURE_IMAGES/,'Guia deve alternar para imagens femininas conforme o perfil');
 assert.match(asset,/viewBox="0 0 600 1000"/,'Guia corporal deve ser retrato');
 assert.match(index,/class="avatar-btn"[\s\S]*?<svg/,'Botão de perfil deve ter ícone visível');
 
