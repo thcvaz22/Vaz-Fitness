@@ -31,6 +31,7 @@
       if(state.currentRun){
         state.currentRun.plannedStructure=item?.runStructure?JSON.parse(JSON.stringify(item.runStructure)):null;
         save();
+        render();
       }
     };
   }
