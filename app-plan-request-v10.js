@@ -138,7 +138,7 @@
     const pad=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
   }
   function extraWorkoutOptions(){
-    return (state.plan||[]).filter(x=>x&&['strength','run'].includes(x.type)&&x.status!=='abandoned');
+    return (state.plan||[]).filter(x=>x&&['strength','run'].includes(x.type)&&x.status!=='abandoned'&&!x.generatedExtra);
   }
   function completedToday(){
     const today=localDateKey();
