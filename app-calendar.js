@@ -40,7 +40,7 @@
       upsertEvent({id:`plan:${session.planId}`,planId:session.planId,date,name:session.name,type,kind:'planned',status:'done',duration:Number(session.duration)||0,sessionId:String(session.id),source:session.source||'app'});
     }else{
       const additional=!!(session.additional||session.extraWorkout);
-      upsertEvent({id:`session:${type}:${session.id}`,date,name:session.name||(type==='run'?'Corrida':'Musculação'),type,kind:additional?'additional':'completed',status:additional?'additional':'done',duration:Number(session.duration)||0,sessionId:String(session.id),source:session.source||'app'});
+      upsertEvent({id:`session:${type}:${session.id}`,date,name:session.extraWorkout?`Treino extra • ${session.name||(type==='run'?'Corrida':'Musculação')}`:(session.name||(type==='run'?'Corrida':'Musculação')),type,kind:additional?'additional':'completed',status:additional?'additional':'done',duration:Number(session.duration)||0,sessionId:String(session.id),source:session.source||'app'});
     }
   }
   function reconcile(){
@@ -136,10 +136,10 @@
 
     return `<section class="card monthly-calendar-card">
       <div class="calendar-head"><div><span class="eyebrow">CALENDÁRIO DE TREINOS</span><h2>${title.charAt(0).toUpperCase()+title.slice(1)}</h2><p>Treinos planejados, realizados, falhas e atividades adicionais.</p></div><div class="calendar-nav"><button class="icon-btn" data-calendar-prev aria-label="Mês anterior">‹</button><button class="calendar-today-btn" data-calendar-current>Hoje</button><button class="icon-btn" data-calendar-next aria-label="Próximo mês">›</button></div></div>
-      <div class="monthly-summary"><div><span>Realizados</span><strong>${realized}</strong></div><div><span>Falhas</span><strong>${missed}</strong></div><div><span>Adicionais</span><strong>${additional}</strong></div><div><span>Consistência</span><strong>${adherence}%</strong></div><div><span>Tempo ativo</span><strong>${Math.floor(minutes/60)}h ${minutes%60}m</strong></div><div><span>Corrida</span><strong>${km.toFixed(1)} km</strong></div></div>
+      <div class="monthly-summary"><div><span>Realizados</span><strong>${realized}</strong></div><div><span>Falhas</span><strong>${missed}</strong></div><div><span>Treinos extras</span><strong>${additional}</strong></div><div><span>Consistência</span><strong>${adherence}%</strong></div><div><span>Tempo ativo</span><strong>${Math.floor(minutes/60)}h ${minutes%60}m</strong></div><div><span>Corrida</span><strong>${km.toFixed(1)} km</strong></div></div>
       <div class="calendar-weekdays"><span>SEG</span><span>TER</span><span>QUA</span><span>QUI</span><span>SEX</span><span>SÁB</span><span>DOM</span></div>
       <div class="calendar-grid">${cells.join('')}</div>
-      <div class="calendar-legend"><span><i class="done"></i>Realizado</span><span><i class="missed"></i>Falha</span><span><i class="additional"></i>Adicional</span><span><i class="planned"></i>Planejado</span></div>
+      <div class="calendar-legend"><span><i class="done"></i>Realizado</span><span><i class="missed"></i>Falha</span><span><i class="additional"></i>Treino extra</span><span><i class="planned"></i>Planejado</span></div>
     </section>`;
   }
 
