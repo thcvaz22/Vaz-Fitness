@@ -58,6 +58,7 @@ jobs:
           node scripts/test-finance-v18.mjs
           node --check personal/today-center-v15.js
           node --check personal/aion-action-plan-v20.js
+          node --check personal/client-360-v22.js
           node scripts/test-today-center-v15.mjs
           node --check personal/safety-v9.js
           node --check api/vf.js
@@ -70,6 +71,7 @@ jobs:
           node scripts/test-plan-history-v13.mjs
           node scripts/test-finalization-v19.mjs
           node scripts/test-rest-extra-v21.mjs
+          node scripts/test-pre1-v23.mjs
       - name: Decode permanent signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
