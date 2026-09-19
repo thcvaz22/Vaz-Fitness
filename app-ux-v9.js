@@ -256,22 +256,28 @@
     const pts=nums.map((v,i)=>`${p+(w-2*p)*(i/(nums.length-1))},${h-p-(h-2*p)*((v-min)/span)}`).join(' ');
     return `<svg class="v9-trend" viewBox="0 0 ${w} ${h}" role="img" aria-label="Evolução do peso"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="v9-trend-labels"><span>${nums[0].toFixed(1)} kg</span><strong>${nums.at(-1).toFixed(1)} kg</strong></div>`;
   }
-  const measureGuidePartsV13=[
-    {id:'chest',label:'Peitoral',hot:'50,27',img:'assets/measurement-chest.jpg',text:'Passe a fita ao redor do tórax na linha dos mamilos, paralela ao chão, com os braços relaxados.'},
-    {id:'waist',label:'Cintura',hot:'50,40',img:'assets/measurement-waist.jpg',text:'Use a linha do umbigo ou o mesmo ponto definido na primeira avaliação. Não prenda a respiração e não aperte a fita.'},
-    {id:'hip',label:'Quadril',hot:'50,51',img:'assets/measurement-hip.jpg',text:'Meça a região mais larga dos glúteos. A fita deve permanecer horizontal em toda a volta.'},
-    {id:'arm',label:'Braço',hot:'31,32',img:'assets/measurement-arm.jpg',text:'Com o braço relaxado ao lado do corpo, meça o ponto médio entre ombro e cotovelo. A fita envolve o braço na horizontal.'},
-    {id:'thigh',label:'Coxa',hot:'44,68',img:'assets/measurement-thigh.jpg',text:'Meça sempre no mesmo ponto entre a virilha e a patela, com a perna relaxada e a fita paralela ao chão.'}
+  const measureGuidePartsV13Base=[
+    {id:'chest',label:'Peitoral',hot:'50,27',text:'Passe a fita ao redor do tórax na linha dos mamilos, paralela ao chão, com os braços relaxados.'},
+    {id:'waist',label:'Cintura',hot:'50,40',text:'Use a linha do umbigo ou o mesmo ponto definido na primeira avaliação. Não prenda a respiração e não aperte a fita.'},
+    {id:'hip',label:'Quadril',hot:'50,51',text:'Meça a região mais larga dos glúteos. A fita deve permanecer horizontal em toda a volta.'},
+    {id:'arm',label:'Braço',hot:'31,32',text:'Com o braço relaxado ao lado do corpo, meça o ponto médio entre ombro e cotovelo. A fita envolve o braço na horizontal.'},
+    {id:'thigh',label:'Coxa',hot:'44,68',text:'Meça sempre no mesmo ponto entre a virilha e a patela, com a perna relaxada e a fita paralela ao chão.'}
   ];
+  function measureGuideDataV34(){
+    const female=state.profile?.sex==='female',femaleImgs=window.VAZ_FEMALE_MEASURE_IMAGES||{};
+    const maleImgs={overview:'assets/measurement-overview.jpg',chest:'assets/measurement-chest.jpg',waist:'assets/measurement-waist.jpg',hip:'assets/measurement-hip.jpg',arm:'assets/measurement-arm.jpg',thigh:'assets/measurement-thigh.jpg'};
+    const parts=measureGuidePartsV13Base.map(p=>({...p,img:female?(femaleImgs[p.id]||maleImgs[p.id]):maleImgs[p.id],text:female&&p.id==='chest'?'Passe a fita ao redor do busto na região de maior circunferência, paralela ao chão, sem comprimir a pele.':p.text}));
+    return {female,overview:female?(femaleImgs.overview||maleImgs.overview):maleImgs.overview,parts};
+  }
   function renderMeasureGuideV13(){
-    const first=measureGuidePartsV13[0];
+    const guide=measureGuideDataV34(),parts=guide.parts,first=parts[0];
     return `<div class="v13-measure-guide" data-measure-root>
       <div class="v13-measure-main">
-        <img src="assets/measurement-overview.jpg" alt="Homem em retrato demonstrando os pontos de medição corporal" onerror="this.onerror=null;this.src='assets/body-measurement-guide-v4.svg'">
-        ${measureGuidePartsV13.map(p=>{const [x,y]=p.hot.split(',');return `<button type="button" class="v13-measure-hotspot" style="left:${x}%;top:${y}%" data-measure-part="${p.id}" aria-label="Ver como medir ${p.label}"><span></span><small>${p.label}</small></button>`}).join('')}
+        <img src="${guide.overview}" alt="${guide.female?'Mulher':'Homem'} em retrato demonstrando os pontos de medição corporal" onerror="this.onerror=null;this.src='assets/measurement-overview.jpg'">
+        ${parts.map(p=>{const [x,y]=p.hot.split(',');return `<button type="button" class="v13-measure-hotspot" style="left:${x}%;top:${y}%" data-measure-part="${p.id}" aria-label="Ver como medir ${p.label}"><span></span><small>${p.label}</small></button>`}).join('')}
       </div>
       <div class="v13-measure-thumbs" aria-label="Escolha a região para ver em detalhe">
-        ${measureGuidePartsV13.map((p,i)=>`<button type="button" class="v13-measure-thumb ${i===0?'active':''}" data-measure-part="${p.id}"><img src="${p.img}" alt="Como medir ${p.label}" loading="lazy"><strong>${p.label}</strong></button>`).join('')}
+        ${parts.map((p,i)=>`<button type="button" class="v13-measure-thumb ${i===0?'active':''}" data-measure-part="${p.id}"><img src="${p.img}" alt="Como medir ${p.label}" loading="lazy"><strong>${p.label}</strong></button>`).join('')}
       </div>
       <div class="v13-measure-detail" data-measure-detail>
         <div class="v13-measure-photo"><img data-measure-detail-img src="${first.img}" alt="Como medir ${first.label}"></div>
@@ -280,7 +286,7 @@
     </div>`;
   }
   function selectMeasureGuideV13(id){
-    const part=measureGuidePartsV13.find(x=>x.id===id)||measureGuidePartsV13[0],root=document.querySelector('[data-measure-root]');if(!root)return;
+    const parts=measureGuideDataV34().parts,part=parts.find(x=>x.id===id)||parts[0],root=document.querySelector('[data-measure-root]');if(!root)return;
     root.querySelectorAll('[data-measure-part]').forEach(b=>b.classList.toggle('active',b.dataset.measurePart===part.id));
     const img=root.querySelector('[data-measure-detail-img]');if(img){img.src=part.img;img.alt='Como medir '+part.label}
     const title=root.querySelector('[data-measure-title]'),text=root.querySelector('[data-measure-text]');if(title)title.textContent=part.label;if(text)text.textContent=part.text;
