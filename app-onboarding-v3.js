@@ -122,15 +122,16 @@
     e.preventDefault();
     const fd=new FormData(e.currentTarget);
     const name=String(fd.get('name')||state.profile.name||'').trim().slice(0,40);
-    const age=Number(fd.get('age')),weight=Number(fd.get('weight')),height=Number(fd.get('height'));
+    const age=Number(fd.get('age')),weight=Number(fd.get('weight')),height=Number(fd.get('height')),sex=String(fd.get('sex')||'');
     if(!name){toast('Informe seu nome.');return;}
     if(!Number.isFinite(age)||age<13||age>100||!Number.isFinite(weight)||weight<30||weight>350||!Number.isFinite(height)||height<120||height>230){toast('Revise idade, peso e altura.');return;}
+    if(!['male','female'].includes(sex)){toast('Selecione Masculino ou Feminino.');return;}
     const mode=fd.get('mode')||'hybrid';
     const strengthLevel=String(fd.get('strengthLevel')||state.profile.strengthLevel||'intermediate');
     const runningLevel=String(fd.get('runningLevel')||state.profile.runningLevel||'intermediate');
     const hybridFocus=mode==='hybrid'?String(fd.get('hybridFocus')||'balanced'):'balanced';
     state.profile={...state.profile,
-      name,age,weight,height,sex:fd.get('sex')||'prefer_not',profileVersion:2,onboardingVersion:3,
+      name,age,weight,height,sex,profileVersion:2,onboardingVersion:3,
       mode,goal:fd.get('goal'),strengthLevel,runningLevel,hybridFocus,
       level:mode==='run'?runningLevel:strengthLevel,
       runLevel:legacyRunningLevel(runningLevel),
