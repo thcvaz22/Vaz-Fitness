@@ -13,10 +13,19 @@ function render(){
   bindDynamic();
 }
 
+function vfLocalDateKey(value){
+  const d=value?new Date(value):new Date();if(Number.isNaN(d.getTime()))return '';
+  const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+function completedMainWorkoutToday(){
+  const today=vfLocalDateKey();
+  return [...(state.sessions||[]),...(state.runSessions||[])].filter(s=>!s.extraWorkout&&(s.localDate||vfLocalDateKey(s.date))===today).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0))[0]||null;
+}
 function renderHome(){
   const today=todaysItem();
+  const completedToday=completedMainWorkoutToday();
   const configuredRest=Array.isArray(state.profile?.restDays)&&state.profile.restDays.map(Number).includes(new Date().getDay());
-  const todayRest=!today&&configuredRest;
+  const todayRest=!today&&!completedToday&&configuredRest;
   const strengthDone=state.sessions.length;
   const runDone=state.runSessions.length;
   const mins=state.sessions.reduce((a,s)=>a+(s.duration||0),0)+state.runSessions.reduce((a,s)=>a+(s.duration||0),0);
@@ -25,8 +34,8 @@ function renderHome(){
     <section class="hero">
       <div class="hero-card">
         <span class="eyebrow">PLANO ADAPTATIVO</span>
-        <h1>${greeting()}, ${state.profile.name}.<br>Vamos evoluir hoje?</h1>
-        <p>${todayRest?'Hoje é seu dia de descanso planejado. O repouso ajuda na recuperação muscular, na reposição de energia e na qualidade do próximo treino. Se estiver se sentindo bem, você pode optar apenas por uma atividade leve.':today?`${today.type==='run'?'Corrida':'Musculação'} programada: <strong>${today.name}</strong>. As orientações abaixo seguem exatamente este treino e qualquer remanejamento já aplicado.`:'Hoje não há treino programado no seu ciclo. Aproveite para recuperar o corpo e se preparar para a próxima sessão.'}</p>
+        <h1>${completedToday?'Treino do dia concluído ✓':`${greeting()}, ${state.profile.name}.<br>Vamos evoluir hoje?`}</h1>
+        <p>${completedToday?`Você concluiu <strong>${completedToday.name||'o treino programado'}</strong> hoje. Se ainda quiser treinar, você pode registrar uma sessão extra, repetir um treino ativo, antecipar um treino futuro ou gerar uma sessão complementar.`:todayRest?'Hoje é seu dia de descanso planejado. O repouso ajuda na recuperação muscular, na reposição de energia e na qualidade do próximo treino. Se estiver se sentindo bem, você pode optar apenas por uma atividade leve.':today?`${today.type==='run'?'Corrida':'Musculação'} programada: <strong>${today.name}</strong>. As orientações abaixo seguem exatamente este treino e qualquer remanejamento já aplicado.`:'Hoje não há treino programado no seu ciclo. Aproveite para recuperar o corpo e se preparar para a próxima sessão.'}</p>
         <div class="hero-actions">
           ${todayRest?`<button class="btn primary" data-extra-workout-open>＋ Selecionar treino extra</button>`:today?`<button class="btn primary" data-start="${today.id}">▶ Iniciar ${today.type==='run'?'corrida':'treino'}</button><button class="btn white" data-skip="${today.id}">Não vou treinar hoje</button>`:`<button class="btn primary" data-extra-workout-open>＋ Selecionar treino extra</button>`}
         </div>
@@ -67,7 +76,7 @@ function startItem(id){
   const item=state.plan.find(x=>x.id===id); if(!item)return;
   const pending=state.pendingExtraWorkout,extra=!!(pending&&String(pending.planId)===String(id)&&Date.now()-Number(pending.selectedAt||0)<30*60*1000);
   if(item.type==='run'){ startRun(item); return; }
-  state.current={planId:id,startedAt:Date.now(),exercises:item.exercises.map(e=>({...e,completedSets:[],effort:null})),currentIndex:0,extraWorkout:extra,executedOnRestDay:extra&&!!pending.executedOnRestDay,originalPlanDay:item.day,originalPlanId:item.id};
+  state.current={planId:id,name:item.name,startedAt:Date.now(),exercises:item.exercises.map(e=>({...e,completedSets:[],effort:null})),currentIndex:0,extraWorkout:extra,executedOnRestDay:extra&&!!pending.executedOnRestDay,anticipatedWorkout:extra&&pending?.mode==='anticipate',anticipatedFromDate:extra?pending?.anticipatedFromDate||null:null,generatedExtra:extra&&pending?.mode==='generated',originalPlanDay:item.day,originalPlanId:item.id};
   if(extra)state.pendingExtraWorkout=null;
   currentExerciseIndex=0; seconds=0; save(); activeView='workout'; startTimer(); render();
 }
