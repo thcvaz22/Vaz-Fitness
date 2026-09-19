@@ -36,6 +36,9 @@ function startRun(item){
     route:[],
     extraWorkout:extra,
     executedOnRestDay:extra&&!!pending.executedOnRestDay,
+    anticipatedWorkout:extra&&pending?.mode==='anticipate',
+    anticipatedFromDate:extra?pending?.anticipatedFromDate||null:null,
+    generatedExtra:extra&&pending?.mode==='generated',
     originalPlanDay:item.day,
     originalPlanId:item.id
   };
@@ -191,6 +194,7 @@ function finishRunSession(){
     distance:+Number(r.distanceKm||0).toFixed(2),pace:formatRunPace(paceSec),plannedPace:r.plannedPace,
     effort:r.effort,route:r.route||[],routePoints:(r.route||[]).length,
     planId:r.planId,extraWorkout:!!r.extraWorkout,executedOnRestDay:!!r.executedOnRestDay,
+    anticipatedWorkout:!!r.anticipatedWorkout,anticipatedFromDate:r.anticipatedFromDate||null,generatedExtra:!!r.generatedExtra,
     originalPlanDay:r.originalPlanDay??item?.day,originalPlanId:r.originalPlanId||item?.id
   };
   state.runSessions.push(session);
