@@ -47,6 +47,13 @@
     if(skipped(dk,id)||entry.mode==='skipped')return 'skipped';
     return dk<key(new Date())?'missed':'pending';
   }
+  function todayOccurrence(){
+    const today=key(new Date());
+    const list=entriesForDate(today).filter(e=>occurrenceStatus(e)==='pending');
+    if(!list.length)return null;
+    const entry=list[0];
+    return {...clone(entry.plan),_occurrenceDate:entry.date,_entryMode:entry.mode,basePlanId:entry.plan.basePlanId||entry.plan.id};
+  }
   function futureOccurrence(){
     const today=key(new Date()),c=cycle();
     for(let d=fromKey(today);d&&key(d)<=key(c.end);d=addDays(d,1)){
@@ -76,7 +83,7 @@
       state.trainingCycle=d.cycle||state.trainingCycle||{days:30};
       state.weekOverrides=acceptRemoteOverrides?(d.weekOverrides||{}):{};
       state.remapRequests=d.requests||[];
-      lastConfigAt=Date.now();save();if(activeView==='progress')render();
+      lastConfigAt=Date.now();save();if(['home','workout','progress'].includes(activeView))render();
     }catch{}finally{configLoading=false}
   }
 
@@ -127,7 +134,9 @@
   }
 
   const priorToday=todaysItem;
-  todaysItem=function(){return futureOccurrence()||priorToday()};
+  window.VazTodayOccurrence=todayOccurrence;
+  window.VazNextOccurrence=futureOccurrence;
+  todaysItem=function(){return todayOccurrence()};
 
   const priorSkip=skipItem;
   skipItem=function(id){const occ=todaysItem(),plan=occ&&String(occ.id)===String(id)?occ:(state.plan||[]).find(x=>String(x.id)===String(id));const date=occ?occ._occurrenceDate:key(new Date());skipOccurrence(plan,date)};
