@@ -1,6 +1,6 @@
 {
-  "version": "0.6.5",
-  "versionCode": 65,
-  "notes": "Confirmação de remanejamento integrada ao Vaz Fitness, sem popup do navegador, herdando automaticamente cores, contraste, nome e ícone/logo definidos pelo personal.",
+  "version": "0.7.0",
+  "versionCode": 70,
+  "notes": "Pacote pré-1.0: fotos reais no guia de medidas, treino extra destacado no calendário e histórico, Visão 360º do aluno com AION e ações diretas, confirmações internas, controle de conflito e reforço de responsividade.",
   "downloadUrl": "https://github.com/thcvaz22/Vaz-Fitness/releases/download/vaz-apps-latest/Vaz-Fitness.apk"
 }
