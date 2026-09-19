@@ -45,6 +45,7 @@ jobs:
           npm run release:check
           node --check app-plan-request-v10.js
           node --check app-plan-sync-v11.js
+          node --check app-running-structured-v33.js
           node --check personal/advanced-v8.js
           node --check personal/plan-request-workflow-v12.js
           node --check personal/plan-history-v13.js
@@ -60,6 +61,7 @@ jobs:
           node --check personal/aion-action-plan-v20.js
           node --check personal/client-360-v22.js
           node --check personal/student-planning-v25.js
+          node --check personal/run-planning-v26.js
           node scripts/test-today-center-v15.mjs
           node --check personal/safety-v9.js
           node --check api/vf.js
