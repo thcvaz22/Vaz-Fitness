@@ -43,11 +43,9 @@
       </label>
       <label>Sexo
         <select name="sex" required>
-          <option value="" ${!state.profile.sex?'selected':''} disabled>Selecione</option>
+          <option value="" ${!['male','female'].includes(state.profile.sex)?'selected':''} disabled>Selecione</option>
           <option value="male" ${state.profile.sex==='male'?'selected':''}>Masculino</option>
           <option value="female" ${state.profile.sex==='female'?'selected':''}>Feminino</option>
-          <option value="other" ${state.profile.sex==='other'?'selected':''}>Outro / intersexo</option>
-          <option value="prefer_not" ${state.profile.sex==='prefer_not'?'selected':''}>Prefiro não informar</option>
         </select>
       </label>
     </div>
@@ -86,11 +84,12 @@
     e.preventDefault();
     const fd=new FormData(e.currentTarget);
     const name=String(fd.get('name')||'').trim().slice(0,40);
-    const age=Number(fd.get('age')),weight=Number(fd.get('weight')),height=Number(fd.get('height'));
+    const age=Number(fd.get('age')),weight=Number(fd.get('weight')),height=Number(fd.get('height')),sex=String(fd.get('sex')||'');
     if(!name){toast('Informe seu nome.');return;}
     if(!Number.isFinite(age)||age<13||age>100||!Number.isFinite(weight)||weight<30||weight>350||!Number.isFinite(height)||height<120||height>230){toast('Revise idade, peso e altura.');return;}
+    if(!['male','female'].includes(sex)){toast('Selecione Masculino ou Feminino.');return;}
     state.profile={...state.profile,
-      name,age,weight,height,sex:fd.get('sex')||'prefer_not',profileVersion:2,
+      name,age,weight,height,sex,profileVersion:2,
       mode:fd.get('mode'),goal:fd.get('goal'),level:fd.get('level'),priorityMuscle:fd.get('priorityMuscle'),
       days:+fd.get('days'),minutes:+fd.get('minutes'),location:fd.get('location'),runLevel:fd.get('runLevel'),easyPace:fd.get('easyPace')||'5:30',restDays:fd.getAll('restDays').map(Number).slice(0,5)
     };
@@ -116,13 +115,13 @@
   renderProfile=function(){
     const html=oldRenderProfile();
     const p=state.profile;
-    const sexLabel={male:'Masculino',female:'Feminino',other:'Outro / intersexo',prefer_not:'Não informado'}[p.sex]||'Não informado';
+    const sexLabel={male:'Masculino',female:'Feminino'}[p.sex]||'—';
     const extra=`<div class="card"><div class="card-head"><div><h2>Perfil físico</h2><p>Dados usados pela AION para individualizar o planejamento</p></div></div><div class="physical-summary"><div><span>Idade</span><strong>${p.age||'—'} anos</strong></div><div><span>Peso</span><strong>${p.weight||'—'} kg</strong></div><div><span>Altura</span><strong>${p.height||'—'} cm</strong></div><div><span>Sexo</span><strong>${sexLabel}</strong></div></div></div>`;
     return html.replace(/<\/section>\s*$/,`${extra}</section>`);
   };
 
   showStep();
   const authenticated=!!localStorage.getItem('vazFitness.authToken');
-  const missingPhysical=authenticated&&state.onboarded&&(!state.profile.age||!state.profile.weight||!state.profile.height||!state.profile.sex||state.profile.profileVersion!==2);
+  const missingPhysical=authenticated&&state.onboarded&&(!state.profile.age||!state.profile.weight||!state.profile.height||!['male','female'].includes(state.profile.sex)||state.profile.profileVersion!==2);
   if(missingPhysical)setTimeout(()=>{toast('Atualizamos seu perfil. Complete idade, peso, altura e sexo para recalibrar o plano.');openOnboarding();},500);
 })();
