@@ -18,10 +18,16 @@ assert.match(studentBrand,/--brand-on-primary/,'Identidade do aluno deve fornece
 assert.match(plan,/delete item\.scheduledDate/,'Remanejamento deve recalcular data');
 assert.match(plan,/data-extra-workout-open/,'Dia de descanso precisa permitir treino extra');
 assert.match(plan,/pendingExtraWorkout/,'Escolha do treino extra precisa ser persistida até o início');
+assert.match(plan,/data-extra-mode="active"/,'Fluxo extra deve permitir escolher treino ativo');
+assert.match(plan,/data-extra-mode="anticipate"/,'Fluxo extra deve permitir antecipar treino');
+assert.match(plan,/data-extra-mode="generate"/,'Fluxo extra deve permitir gerar sessão complementar');
+assert.match(plan,/futureOptions\(\)/,'Antecipação deve listar ocorrências futuras reais do ciclo');
+assert.match(cycle,/anticipatedOccurrences/,'Calendário deve persistir ocorrências antecipadas');
+assert.match(cycle,/upcomingOccurrences/,'Calendário deve expor próximos treinos para antecipação');
 assert.match(plan,/const baseWorkout=renderWorkout/,'Dias de descanso devem entrar na aba Treinos');
 assert.match(plan,/state\.weekOverrides=\{\}/,'Troca de descanso deve limpar remanejamentos semanais antigos');
 assert.match(plan,/status!=='abandoned'/,'Remanejamento global deve considerar todos os treinos válidos, não só pendentes');
-assert.match(cycle,/restDay\?'Descanso':'Sem treino'/,'Calendário só pode chamar de descanso um dia explicitamente selecionado');
+assert.match(cycle,/anticipatedRest\?'Descanso • treino antecipado':restDay\?'Descanso':'Sem treino'/,'Calendário deve mostrar descanso quando o dia foi liberado por antecipação ou definido como descanso');
 assert.match(cycle,/weekOverridesResetPending/,'Sincronização não pode restaurar remanejamentos antigos enquanto a limpeza estiver pendente');
 assert.match(remapHandler,/action==='reset_overrides'/,'Backend deve permitir invalidar remanejamentos antigos do aluno');
 assert.match(remapHandler,/status:'superseded'/,'Solicitações antigas pendentes devem ser invalidadas ao trocar descanso');
@@ -32,6 +38,8 @@ assert.match(membership,/localRestAt>remoteRestAt/,'Sincronização deve preserv
 assert.match(membership,/localResetPending/,'Sincronização deve preservar limpeza local de overrides');
 
 assert.match(training,/extraWorkout:!!c\.extraWorkout/,'Musculação deve registrar flag extra');
+assert.match(training,/anticipatedWorkout:!!c\.anticipatedWorkout/,'Musculação antecipada deve manter metadado de antecipação');
+assert.match(running,/anticipatedWorkout:!!r\.anticipatedWorkout/,'Corrida antecipada deve manter metadado de antecipação');
 assert.match(training,/if\(item&&!c\.extraWorkout\)item\.status='done'/,'Treino extra de força não pode concluir o plano');
 assert.match(running,/extraWorkout:extra/,'Corrida deve herdar seleção extra');
 assert.match(running,/if\(item&&!r\.extraWorkout\)/,'Corrida extra não pode concluir o plano');
@@ -50,4 +58,4 @@ for(const code of [visual,studentBrand]){
   assert.match(code,/alligator:[\s\S]*?stroke-width="1\.55"/,'Jacaré deve usar ícone refinado');
   assert.match(code,/flame:[\s\S]*?stroke-width="1\.6"/,'Fogo deve usar ícone refinado');
 }
-console.log('Pacote 0.6.5 — descanso, treino extra, guia, mobile e modal de marca: regressões cobertas.');
+console.log('Pacote atual — descanso, treino extra, antecipação, guia, mobile e modal de marca: regressões cobertas.');
