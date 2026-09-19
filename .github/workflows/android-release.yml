@@ -59,7 +59,7 @@ jobs:
           node --check personal/today-center-v15.js
           node --check personal/aion-action-plan-v20.js
           node --check personal/client-360-v22.js
-          node --check personal/day-editor-v24.js
+          node --check personal/student-planning-v25.js
           node scripts/test-today-center-v15.mjs
           node --check personal/safety-v9.js
           node --check api/vf.js
