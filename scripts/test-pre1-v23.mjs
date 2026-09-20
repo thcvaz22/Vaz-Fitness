@@ -12,10 +12,16 @@ const [ux,plan,training,calendar,cycle,membership,sw,build,fitnessCss,personal,p
 ]);
 
 // Guia real de medidas.
-for(const asset of ['measurement-overview.jpg','measurement-chest.jpg','measurement-waist.jpg','measurement-hip.jpg','measurement-arm.jpg','measurement-thigh.jpg']){
+for(const asset of ['overview.jpg','chest.jpg','waist.jpg','hip.jpg','arm.jpg','thigh.jpg']){
+  const path='assets/measurements/male/'+asset;
+  const escaped=path.replace(/[.*+?^$\{\}()|[\]\\]/g,'\\for(const asset of ['measurement-overview.jpg','measurement-chest.jpg','measurement-waist.jpg','measurement-hip.jpg','measurement-arm.jpg','measurement-thigh.jpg']){
   assert.match(ux,new RegExp(asset.replace('.','\\.')),`guia precisa usar ${asset}`);
   assert.match(sw,new RegExp(asset.replace('.','\\.')),`cache precisa incluir ${asset}`);
   assert.match(build,new RegExp(asset.replace('.','\\.')),`build nativo precisa incluir ${asset}`);
+}');
+  assert.match(ux,new RegExp(escaped),`guia masculino precisa usar ${path}`);
+  assert.match(sw,new RegExp(escaped),`cache precisa incluir ${path}`);
+  assert.match(build,new RegExp(escaped),`build nativo precisa incluir ${path}`);
 }
 assert.match(ux,/data-measure-detail-img/,'detalhe real de medição precisa ser interativo');
 assert.match(ux,/assets\/measurements\/male\/overview\.jpg/,'imagem principal masculina deve usar o novo caminho organizado');
