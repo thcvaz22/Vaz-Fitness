@@ -18,7 +18,7 @@ for(const asset of ['measurement-overview.jpg','measurement-chest.jpg','measurem
   assert.match(build,new RegExp(asset.replace('.','\\.')),`build nativo precisa incluir ${asset}`);
 }
 assert.match(ux,/data-measure-detail-img/,'detalhe real de medição precisa ser interativo');
-assert.match(ux,/measurement-overview\.jpg/,'imagem principal deve ser retrato real');
+assert.match(ux,/assets\/measurements\/male\/overview\.jpg/,'imagem principal masculina deve usar o novo caminho organizado');
 
 // Descanso, remanejamento e treino extra.
 assert.match(plan,/data-remap-workouts/,'aba Treinos precisa permitir remanejar');
