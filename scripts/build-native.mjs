@@ -8,15 +8,16 @@ const files=['index.html','styles.css','native-safearea.css','app-core.js','app-
 await rm('www',{recursive:true,force:true});
 await mkdir('www',{recursive:true});
 await mkdir('www/assets',{recursive:true});
+await mkdir('www/assets/measurements/male',{recursive:true});
 for(const file of files){if(existsSync(file))await copyFile(file,`www/${file}`);}
 if(existsSync('assets/body-measurement-guide-v4.svg'))await copyFile('assets/body-measurement-guide-v4.svg','www/assets/body-measurement-guide-v4.svg');
 if(existsSync('assets/body-measurement-guide-v2.png'))await copyFile('assets/body-measurement-guide-v2.png','www/assets/body-measurement-guide-v2.png');
-if(existsSync('assets/measurement-overview.jpg'))await copyFile('assets/measurement-overview.jpg','www/assets/measurement-overview.jpg');
-if(existsSync('assets/measurement-chest.jpg'))await copyFile('assets/measurement-chest.jpg','www/assets/measurement-chest.jpg');
-if(existsSync('assets/measurement-waist.jpg'))await copyFile('assets/measurement-waist.jpg','www/assets/measurement-waist.jpg');
-if(existsSync('assets/measurement-hip.jpg'))await copyFile('assets/measurement-hip.jpg','www/assets/measurement-hip.jpg');
-if(existsSync('assets/measurement-arm.jpg'))await copyFile('assets/measurement-arm.jpg','www/assets/measurement-arm.jpg');
-if(existsSync('assets/measurement-thigh.jpg'))await copyFile('assets/measurement-thigh.jpg','www/assets/measurement-thigh.jpg');
+if(existsSync('assets/measurements/male/overview.jpg'))await copyFile('assets/measurements/male/overview.jpg','www/assets/measurements/male/overview.jpg');
+if(existsSync('assets/measurements/male/chest.jpg'))await copyFile('assets/measurements/male/chest.jpg','www/assets/measurements/male/chest.jpg');
+if(existsSync('assets/measurements/male/waist.jpg'))await copyFile('assets/measurements/male/waist.jpg','www/assets/measurements/male/waist.jpg');
+if(existsSync('assets/measurements/male/hip.jpg'))await copyFile('assets/measurements/male/hip.jpg','www/assets/measurements/male/hip.jpg');
+if(existsSync('assets/measurements/male/arm.jpg'))await copyFile('assets/measurements/male/arm.jpg','www/assets/measurements/male/arm.jpg');
+if(existsSync('assets/measurements/male/thigh.jpg'))await copyFile('assets/measurements/male/thigh.jpg','www/assets/measurements/male/thigh.jpg');
 
 await build({entryPoints:['native-entry.js'],bundle:true,format:'iife',platform:'browser',target:['es2020'],outfile:'www/app-native-bundle.js',minify:false});
 
