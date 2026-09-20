@@ -277,7 +277,7 @@
   ];
   function measureGuideDataV34(){
     const female=state.profile?.sex==='female',femaleImgs=window.VAZ_FEMALE_MEASURE_IMAGES||{};
-    const maleImgs={overview:'assets/measurement-overview.jpg',chest:'assets/measurement-chest.jpg',waist:'assets/measurement-waist.jpg',hip:'assets/measurement-hip.jpg',arm:'assets/measurement-arm.jpg',thigh:'assets/measurement-thigh.jpg'};
+    const maleImgs={overview:'assets/measurements/male/overview.jpg',chest:'assets/measurements/male/chest.jpg',waist:'assets/measurements/male/waist.jpg',hip:'assets/measurements/male/hip.jpg',arm:'assets/measurements/male/arm.jpg',thigh:'assets/measurements/male/thigh.jpg'};
     const parts=measureGuidePartsV13Base.map(p=>({...p,img:female?(femaleImgs[p.id]||maleImgs[p.id]):maleImgs[p.id],text:female&&p.id==='chest'?'Passe a fita ao redor do busto na região de maior circunferência, paralela ao chão, sem comprimir a pele.':p.text}));
     return {female,overview:female?(femaleImgs.overview||maleImgs.overview):maleImgs.overview,parts};
   }
@@ -285,7 +285,7 @@
     const guide=measureGuideDataV34(),parts=guide.parts,first=parts[0];
     return `<div class="v13-measure-guide" data-measure-root>
       <div class="v13-measure-main">
-        <img src="${guide.overview}" alt="${guide.female?'Mulher':'Homem'} em retrato demonstrando os pontos de medição corporal" onerror="this.onerror=null;this.src='assets/measurement-overview.jpg'">
+        <img src="${guide.overview}" alt="${guide.female?'Mulher':'Homem'} em retrato demonstrando os pontos de medição corporal" onerror="this.onerror=null;this.src='assets/measurements/male/overview.jpg'">
         ${parts.map(p=>{const [x,y]=p.hot.split(',');return `<button type="button" class="v13-measure-hotspot" style="left:${x}%;top:${y}%" data-measure-part="${p.id}" aria-label="Ver como medir ${p.label}"><span></span><small>${p.label}</small></button>`}).join('')}
       </div>
       <div class="v13-measure-thumbs" aria-label="Escolha a região para ver em detalhe">
